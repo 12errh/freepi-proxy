@@ -1,0 +1,26 @@
+{
+  "name": "freepi-proxy",
+  "version": "1.0.0",
+  "description": "Zero-dependency local proxy, dashboard, chat UI, and MCP server for the free-pi (freepi.ai) model catalog. Runs on Node.js >=22.19 or Bun, no build step.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "freepi-proxy": "./freepi-proxy"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "start:bun": "bun src/main.ts"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "keywords": [
+    "free-pi",
+    "openai-compatible",
+    "proxy",
+    "mcp",
+    "llm",
+    "dashboard"
+  ],
+  "license": "MIT"
+}

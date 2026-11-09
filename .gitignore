@@ -1,0 +1,30 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Logs / local runtime artifacts (never commit)
+*.log
+proxy.pid
+proxy.log
+
+# Node / Bun (this project has zero dependencies, but keep safe)
+node_modules/
+bun.lockb
+package-lock.json
+pnpm-lock.yaml
+
+# Generated images from the MCP generate_image tool
+images/
+
+# Never commit credentials or tokens
+.free-pi/
+.freepi-proxy/
+credentials.json
+*.jwt
+.env
+.env.*

@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PORT="${FREEPI_PROXY_PORT:-8452}"
+BASE="http://127.0.0.1:${PORT}"
+DATA="${HOME}/.freepi-proxy"
+PIDFILE="${DATA}/proxy.pid"
+LOG="${DATA}/proxy.log"
+mkdir -p "$DATA"
+
+usage() {
+  cat <<EOF
+freepi-proxy — local proxy + dashboard + MCP for free-pi models
+
+Usage: freepi-proxy <command> [options]
+
+Commands:
+  start           Start the proxy in the foreground (Ctrl+C to stop)
+  start -d        Start in the background (daemon mode)
+  stop            Stop the running proxy
+  restart         Restart the proxy (background)
+  status          Show whether it's running + account/credits summary
+  logs [n]        Show last n log lines (default 50); use -f to follow
+  open            Open the dashboard in your browser
+  models          List available free-pi models from the proxy
+  help            Show this help
+
+Dashboard: ${BASE}
+Completions: ${BASE}/v1   (OpenAI-compatible)
+MCP tools: ${BASE}/mcp
+Env: FREEPI_PROXY_PORT=${PORT}
+EOF
+}
+
+is_up() {
+  curl -fsS -m 2 "${BASE}/api/state" >/dev/null 2>&1
+}
+
+pid_alive() {
+  local p="${1:-}"
+  [[ -n "$p" ]] && kill -0 "$p" 2>/dev/null
+}
+
+read_pid() {
+  [[ -f "$PIDFILE" ]] && tr -dc '0-9' < "$PIDFILE" || true
+}
+
+cmd_start() {
+  local bg=0
+  [[ "${1:-}" == "-d" || "${1:-}" == "--background" || "${1:-}" == "--daemon" ]] && bg=1
+  if is_up; then
+    echo "freepi-proxy already running → ${BASE}"
+    return 0
+  fi
+  if [[ $bg -eq 1 ]]; then
+    nohup node "$DIR/src/main.ts" >> "$LOG" 2>&1 &
+    echo $! > "$PIDFILE"
+    disown "$!" 2>/dev/null || true
+    # wait briefly for it to come up
+    for _ in 1 2 3 4 5 6 7 8; do
+      if is_up; then
+        echo "started (pid $(cat "$PIDFILE")) → ${BASE}"
+        echo "dashboard: ${BASE}   (keep it open so ads report and completions stay active)"
+        return 0
+      fi
+      sleep 0.4
+    done
+    echo "started but not responding yet — check: freepi-proxy logs" >&2
+    return 1
+  else
+    echo "starting freepi-proxy (foreground) → ${BASE}   (Ctrl+C to stop)"
+    exec node "$DIR/src/main.ts"
+  fi
+}
+
+cmd_stop() {
+  if is_up; then
+    # prefer killing by port to be sure
+    fuser -k "${PORT}/tcp" >/dev/null 2>&1 || true
+    sleep 0.4
+  fi
+  local p; p="$(read_pid)"
+  if pid_alive "$p"; then
+    kill "$p" 2>/dev/null || true
+    sleep 0.3
+    pid_alive "$p" && kill -9 "$p" 2>/dev/null || true
+  fi
+  rm -f "$PIDFILE"
+  if is_up; then
+    echo "warning: something is still listening on ${PORT}" >&2
+    return 1
+  fi
+  echo "stopped."
+}
+
+cmd_restart() {
+  cmd_stop || true
+  cmd_start -d
+}
+
+cmd_status() {
+  if ! is_up; then
+    echo "status: NOT RUNNING (port ${PORT})"
+    echo "start:  freepi-proxy start -d"
+    return 1
+  fi
+  echo "status: RUNNING → ${BASE}"
+  curl -fsS -m 4 "${BASE}/api/state" | node -e '
+    let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{
+      try{const j=JSON.parse(d), s=j.status,l=j.live,sv=j.server;
+        console.log("  account:  " + (s.token==="ok" ? "@"+s.handle+" · tier "+s.tier+" · lane "+s.lane : s.token));
+        if(l.remaining_credits_today!=null) console.log("  credits:  "+l.remaining_credits_today.toLocaleString()+" / "+(l.allowance_credits||"?").toLocaleString()+" left today");
+        if(l.refill_at) console.log("  refills:  "+l.refill_at);
+        if(sv) console.log("  uptime:   "+Math.round((sv.uptimeMs||0)/60000)+"m  ·  log: ~/.freepi-proxy/proxy.log");
+        console.log("  note:     keep the dashboard open so ads report and completions stay active");
+      }catch(e){console.log("  (could not parse state)");}
+    });'
+}
+
+cmd_logs() {
+  if [[ "${1:-}" == "-f" || "${1:-}" == "--follow" ]]; then
+    touch "$LOG"; exec tail -n "${2:-50}" -f "$LOG"
+  fi
+  local n="${1:-50}"
+  if [[ ! -f "$LOG" ]]; then echo "(no log yet at $LOG)"; return 0; fi
+  tail -n "$n" "$LOG"
+}
+
+cmd_open() {
+  local url="$BASE"
+  if command -v xdg-open >/dev/null 2>&1; then xdg-open "$url" >/dev/null 2>&1 &
+  elif command -v open >/dev/null 2>&1; then open "$url" >/dev/null 2>&1 &
+  else echo "open in browser: $url"; return 0; fi
+  echo "opened ${url}"
+}
+
+cmd_models() {
+  if ! is_up; then echo "proxy not running — start it first: freepi-proxy start -d" >&2; return 1; fi
+  curl -fsS -m 5 "${BASE}/v1/models" | node -e '
+    let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{
+      try{JSON.parse(d).data.forEach(m=>console.log("freepi/"+m.id))}catch(e){console.log(d)}
+    });'
+}
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  start)    cmd_start "${1:-}";;
+  stop)     cmd_stop;;
+  restart)  cmd_restart;;
+  status)   cmd_status;;
+  logs)     cmd_logs "${1:-}";;
+  open)     cmd_open;;
+  models)   cmd_models;;
+  help|-h|--help) usage;;
+  *) echo "unknown command: $cmd"; echo; usage; exit 1;;
+esac
