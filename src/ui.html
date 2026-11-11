@@ -7,14 +7,15 @@
 <style>
   :root {
     --bg: #0A0A0B;
+    --side: #0D0D10;
     --surface: #121214;
-    --surface-2: #1A1A1E;
-    --surface-3: #222228;
-    --border: #232329;
-    --border-strong: #30303A;
+    --surface-2: #17171B;
+    --surface-3: #1F1F25;
+    --border: #1E1E23;
+    --border-strong: #2C2C33;
     --text: #EDEDF0;
     --muted: #A9A9B4;
-    --faint: #7D7D89;
+    --faint: #85858F;
     --accent: #2DD4BF;
     --accent-soft: rgba(45, 212, 191, .12);
     --accent-border: rgba(45, 212, 191, .32);
@@ -22,24 +23,22 @@
     --ok: #4ADE80;
     --warn: #FBBF24;
     --bad: #F87171;
-    --radius: 14px;
+    --radius: 16px;
     --radius-sm: 9px;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", sans-serif;
     --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
-    --pad: clamp(16px, 3vw, 32px);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { color-scheme: dark; }
   body {
     background: var(--bg); color: var(--text);
-    font: 15px/1.55 var(--font);
+    font: 14px/1.55 var(--font);
     -webkit-font-smoothing: antialiased;
-    padding: 22px var(--pad) 48px;
   }
   ::selection { background: var(--accent); color: var(--on-accent); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 5px; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-thumb { background: #2A2A32; border-radius: 8px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #26262D; border-radius: 8px; border: 2px solid var(--bg); }
   ::-webkit-scrollbar-track { background: transparent; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; text-underline-offset: 2px; }
@@ -58,24 +57,48 @@
   .muted { color: var(--muted); }
   .faint { color: var(--faint); }
 
-  .wrap { max-width: 1180px; margin: 0 auto; }
-
-  /* ---------- top bar ---------- */
-  .topbar { display: flex; align-items: center; gap: 16px; padding: 6px 0 20px; }
-  .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
-  .mark {
-    width: 30px; height: 30px; border-radius: 9px; flex: none;
-    background: var(--surface-2); border: 1px solid var(--border-strong);
-    display: grid; place-items: center; font: 700 16px/1 var(--mono); color: var(--accent);
+  /* ---------- shell: sidebar + content ---------- */
+  .shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100vh; }
+  .side {
+    position: sticky; top: 0; align-self: start; height: 100vh;
+    display: flex; flex-direction: column;
+    background: var(--side); border-right: 1px solid var(--border);
+    padding: 20px 14px 16px;
   }
-  .brand h1 { font-size: 16px; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
-  .brand .sub { color: var(--faint); font-size: 12.5px; font-weight: 450; }
-  .topbar .sp { flex: 1; }
+  .brand { display: flex; align-items: center; gap: 11px; padding: 0 8px; min-width: 0; }
+  .mark {
+    width: 32px; height: 32px; border-radius: 10px; flex: none;
+    background: var(--surface-2); border: 1px solid var(--border-strong);
+    display: grid; place-items: center; font: 700 17px/1 var(--mono); color: var(--accent);
+  }
+  .brand h1 { font-size: 15px; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
+  .brand .sub { color: var(--faint); font-size: 12px; font-weight: 450; }
+
+  .tabs { display: flex; flex-direction: column; gap: 2px; margin-top: 24px; }
+  .tab {
+    position: relative; display: flex; align-items: center; gap: 10px; width: 100%;
+    font: 600 13.5px/1 var(--font); color: var(--muted);
+    background: transparent; border: 0; border-radius: 9px;
+    padding: 10px 12px; cursor: pointer; text-align: left; white-space: nowrap;
+    transition: color .15s ease, background .15s ease;
+  }
+  .tab:hover { color: var(--text); background: var(--surface-2); }
+  .tab.active { color: var(--text); background: var(--surface-2); }
+  .tab.active::before {
+    content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 2px;
+    border-radius: 2px; background: var(--accent);
+  }
+  .tab.active .ico { color: var(--accent); }
+  .tab .ico { width: 15px; height: 15px; flex: none; opacity: .9; }
+  .tabpanel[hidden] { display: none; }
+
+  .side-sp { flex: 1; }
+  .side-foot { display: flex; flex-direction: column; gap: 10px; }
   .status {
-    display: inline-flex; align-items: center; gap: 8px;
+    display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
     font-size: 12.5px; font-weight: 600; color: var(--muted);
     background: var(--surface); border: 1px solid var(--border);
-    padding: 7px 12px; border-radius: 999px; white-space: nowrap;
+    padding: 7px 12px; border-radius: 999px; white-space: nowrap; max-width: 100%;
   }
   .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
   .status.ok { color: var(--ok); }
@@ -84,7 +107,12 @@
   .status.warn .dot { background: var(--warn); box-shadow: 0 0 0 3px rgba(251,191,36,.12); }
   .status.bad { color: var(--bad); }
   .status.bad .dot { background: var(--bad); box-shadow: 0 0 0 3px rgba(248,113,113,.12); }
-  .top-actions { display: flex; gap: 8px; align-items: center; }
+  .side-actions { display: flex; gap: 8px; }
+  .side-actions button { flex: 1; padding: 8px 10px; font-size: 12.5px; }
+  .synced { font-size: 12px; padding: 0 8px; }
+
+  .content { min-width: 0; padding: 26px clamp(18px, 3.5vw, 40px) 40px; }
+  .page { max-width: 1120px; margin: 0 auto; }
 
   /* ---------- notice ---------- */
   .notice {
@@ -96,86 +124,67 @@
   .notice.show { display: flex; }
   .notice svg { flex: none; margin-top: 2px; }
 
-  /* ---------- tabs ---------- */
-  .tabs {
-    display: inline-flex; gap: 2px; align-items: center;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 3px; margin-bottom: 18px;
-    max-width: 100%; overflow-x: auto;
-  }
-  .tab {
-    display: inline-flex; align-items: center; gap: 7px;
-    font: 600 13px/1 var(--font); color: var(--muted);
-    background: transparent; border: 1px solid transparent; border-radius: 9px;
-    padding: 9px 15px; cursor: pointer; white-space: nowrap;
-    transition: color .16s ease, background .16s ease, border-color .16s ease;
-  }
-  .tab:hover { color: var(--text); background: var(--surface-2); }
-  .tab.active {
-    color: var(--accent); background: var(--surface-2);
-    border-color: var(--border-strong);
-    box-shadow: inset 0 -2px 0 var(--accent);
-  }
-  .tab .ico { width: 14px; height: 14px; flex: none; opacity: .85; }
-  .tabpanel[hidden] { display: none; }
-
-  /* ---------- account strip ---------- */
-  .account {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px;
-    padding: 14px 18px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: var(--radius);
-    margin-bottom: 14px;
-  }
-  .account .item { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-  .account .k { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
-  .account .v { font-size: 13.5px; font-weight: 600; }
-  .account .v.mono { font-size: 13px; }
-
-  /* ---------- credits ---------- */
-  .credits {
-    display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end;
-    padding: 22px 24px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: var(--radius);
-    margin-bottom: 14px;
-  }
-  .credits .label { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
-  .credits .num { font-size: clamp(34px, 5vw, 46px); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; margin-top: 6px; font-variant-numeric: tabular-nums; }
-  .credits .num .unit { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 10px; }
-  .track { height: 6px; background: var(--surface-2); border-radius: 999px; margin: 14px 0 10px; overflow: hidden; }
-  .track > div { height: 100%; width: 0; border-radius: 999px; background: var(--accent); transition: width .7s cubic-bezier(.22,1,.36,1); }
-  .credits .meta { display: flex; justify-content: space-between; gap: 16px; font-size: 12.5px; color: var(--muted); }
-  .credits .meta .pct { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
-  .minis { display: flex; gap: 28px; }
-  .mini { display: flex; flex-direction: column; gap: 3px; min-width: 84px; }
-  .mini .k { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
-  .mini .v { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-
   /* ---------- panels ---------- */
   .panel {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px;
+    border-radius: var(--radius); padding: 18px 20px;
   }
+  .panel + .panel, .panel + .adcard, .adcard + .panel, .grid-charts + .adcard, .panel + .grid-charts, .hero + .grid-charts, .hero + .panel, .hero + .adcard { margin-top: 14px; }
   .panel-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
-  .panel-head h2 { font-size: 13px; font-weight: 650; letter-spacing: .02em; color: var(--text); }
-  .panel-head .hint { font-size: 12px; color: var(--faint); margin-left: auto; }
-  .grid-2 { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; }
-  .grid-2 .panel { min-width: 0; }
-  @media (max-width: 920px) {
-    .grid-2 { grid-template-columns: 1fr; }
-    .credits { grid-template-columns: 1fr; }
-    .minis { gap: 20px; }
-  }
+  .panel-head h2 { font-size: 13.5px; font-weight: 650; letter-spacing: .01em; color: var(--text); }
+  .panel-head .hint { font-size: 12px; color: var(--faint); margin-left: auto; font-variant-numeric: tabular-nums; }
 
-  /* ---------- chart ---------- */
+  /* ---------- hero (one metric + quiet stat row) ---------- */
+  .hero { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 20px 22px 6px; }
+  .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .hero-label { font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .hero-id { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--muted); min-width: 0; }
+  .hero-id .sep { color: var(--border-strong); }
+  .hero-num { font-size: clamp(38px, 5.5vw, 52px); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; margin-top: 10px; font-variant-numeric: tabular-nums; }
+  .hero-num .unit { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 10px; }
+  .track { height: 7px; background: var(--surface-3); border-radius: 999px; margin: 16px 0 10px; overflow: hidden; }
+  .track > div { height: 100%; width: 0; border-radius: 999px; background: var(--accent); transition: width .7s cubic-bezier(.22,1,.36,1); }
+  .hero-meta { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+  .hero-meta .right { display: flex; gap: 16px; align-items: baseline; }
+  .hero-meta .refill b { color: var(--text); font-weight: 650; font-variant-numeric: tabular-nums; }
+  .hero-meta .pct { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .statrow { display: flex; flex-wrap: wrap; gap: 10px 36px; padding: 16px 0 18px; border-top: 1px solid var(--border); margin-top: 16px; }
+  .statrow .item { display: flex; flex-direction: column; gap: 3px; min-width: 72px; }
+  .statrow .k { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); white-space: nowrap; }
+  .statrow .v { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .statrow .v.mono { font-size: 14px; }
+
+  /* ---------- charts ---------- */
+  .grid-charts { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; }
+  .grid-charts .panel { min-width: 0; }
   svg.chart { width: 100%; height: 120px; display: block; }
   .chart-legend { display: flex; gap: 18px; margin-top: 10px; font-size: 12px; color: var(--muted); }
   .chart-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+  /* ---------- ad ---------- */
+  .adcard {
+    display: none; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 16px;
+  }
+  .adcard.show { display: flex; }
+  .adtag { font: 700 11px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); border: 1px solid var(--border-strong); border-radius: 4px; padding: 3px 6px; flex: none; }
+  .adbody { min-width: 0; flex: 1; }
+  .adbody .ah { font-weight: 650; font-size: 13.5px; }
+  .adbody .ab { color: var(--muted); font-size: 12.5px; margin-top: 1px; }
+  .adbody .why { color: var(--faint); font-size: 12px; margin-top: 3px; }
+  .adcta {
+    flex: none; margin-left: auto; font-size: 12px; font-weight: 650;
+    color: var(--accent); background: var(--accent-soft);
+    border: 1px solid var(--accent-border); padding: 7px 13px; border-radius: var(--radius-sm);
+  }
+  .adcta:hover { background: rgba(45,212,191,.2); text-decoration: none; }
 
   /* ---------- model spend rows ---------- */
   .mrow { display: grid; grid-template-columns: minmax(0,1fr) 190px 64px; gap: 12px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
   .mrow:last-child { border-bottom: none; }
   .mrow .name { font-family: var(--mono); font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .mrow .bar { height: 5px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .mrow .bar { height: 5px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
   .mrow .bar > div { height: 100%; background: var(--accent); border-radius: 999px; width: 0; transition: width .6s cubic-bezier(.22,1,.36,1); }
   .mrow .val { font-size: 12.5px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
   .empty { color: var(--faint); font-size: 13px; padding: 18px 0; text-align: center; }
@@ -186,7 +195,7 @@
   th {
     text-align: left; font-size: 11px; font-weight: 650; letter-spacing: .09em;
     text-transform: uppercase; color: var(--faint); padding: 6px 10px;
-    border-bottom: 1px solid var(--border); white-space: nowrap;
+    border-bottom: 1px solid var(--border-strong); white-space: nowrap;
   }
   td { padding: 7px 10px; border-bottom: 1px solid #18181C; white-space: nowrap; vertical-align: middle; }
   tbody tr { transition: background .12s ease; }
@@ -196,6 +205,8 @@
   th.num { text-align: right; }
   .id { font-family: var(--mono); font-size: 12px; color: var(--muted); }
   .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  .cat-row td { padding: 15px 10px 7px; font: 650 11px var(--font); letter-spacing: .09em; text-transform: uppercase; color: var(--faint); border-bottom: none; }
+  .cat-row:first-child td { padding-top: 4px; }
 
   .pager { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
   .pager .info { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
@@ -214,49 +225,30 @@
   .chip.off { color: var(--faint); }
   .chip.src { color: var(--muted); }
 
-  /* ---------- ad ---------- */
-  .adcard {
-    display: none; align-items: center; gap: 14px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 14px 18px; margin-bottom: 14px;
-  }
-  .adcard.show { display: flex; }
-  .adtag { font-size: 11px; font-weight: 700; letter-spacing: .12em; color: var(--faint); text-transform: uppercase; flex: none; }
-  .adbody { min-width: 0; flex: 1; }
-  .adbody .ah { font-weight: 650; font-size: 14px; }
-  .adbody .ab { color: var(--muted); font-size: 13px; margin-top: 1px; }
-  .adbody .why { color: var(--faint); font-size: 12px; margin-top: 4px; }
-  .adcta {
-    flex: none; margin-left: auto; font-size: 12.5px; font-weight: 650;
-    color: var(--accent); background: var(--accent-soft);
-    border: 1px solid var(--accent-border); padding: 8px 14px; border-radius: var(--radius-sm);
-  }
-  .adcta:hover { background: rgba(45,212,191,.2); }
-
   /* ---------- setup ---------- */
   .setup pre {
     background: #0C0C0E; border: 1px solid var(--border); border-radius: var(--radius-sm);
     padding: 13px 15px; overflow-x: auto; font-family: var(--mono);
     font-size: 12px; line-height: 1.65; color: #C4C4CE; margin-top: 10px;
   }
-  .setup .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 920px) { .setup .cols { grid-template-columns: 1fr; } }
-  .setup .head { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .setup .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .setup .head { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+  .setup .head .step { font: 700 11px/1 var(--mono); color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-border); border-radius: 5px; padding: 3px 7px; }
   .setup .head b { font-size: 13px; font-weight: 650; }
   .setup .head .copy { margin-left: auto; padding: 5px 10px; font-size: 12px; }
   .setup p.note { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
-  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 6px 16px; font-size: 13px; margin-top: 10px; }
+  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 8px 16px; font-size: 13px; margin-top: 4px; }
   .kv dt { color: var(--faint); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding-top: 2px; }
   .kv dd { color: var(--muted); }
 
   footer {
-    margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--border);
+    margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--border);
     display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--faint); font-size: 12px;
   }
   footer .sp { flex: 1; }
 
   /* ---------- chat ---------- */
-  .chat-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 14px; height: calc(100vh - 250px); min-height: 480px; }
+  .chat-layout { display: grid; grid-template-columns: 252px minmax(0, 1fr); gap: 14px; height: calc(100vh - 200px); min-height: 480px; }
   .chat-side { padding: 16px; overflow-y: auto; }
   .side-block { margin-bottom: 15px; }
   .side-label { display: block; font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 7px; }
@@ -275,30 +267,40 @@
   input[type="range"] { width: 100%; accent-color: var(--accent); }
   .check { display: flex; gap: 9px; align-items: center; font-size: 13px; color: var(--muted); margin: 2px 0 16px; cursor: pointer; }
   .check input { accent-color: var(--accent); width: 15px; height: 15px; }
-  .side-actions { display: flex; gap: 8px; }
-  .side-actions button { flex: 1; }
-  .side-foot { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--faint); line-height: 1.6; }
+  .side-foot-note { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--faint); line-height: 1.6; }
   .chat-main { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; min-width: 0; }
   .chat-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
   .chat-title { font-size: 13px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chat-head .sp { flex: 1; }
   .chat-head button { padding: 6px 11px; font-size: 12px; }
   .chat-messages { flex: 1; overflow-y: auto; padding: 20px; }
-  .chat-empty { text-align: center; color: var(--muted); padding: 64px 20px; line-height: 1.7; }
-  .msg { margin-bottom: 18px; }
-  .msg-who { font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 5px; }
+  .chat-empty { text-align: center; color: var(--muted); padding: 60px 20px; line-height: 1.7; }
+  .msg { margin-bottom: 20px; }
+  .msg.user { display: flex; flex-direction: column; align-items: flex-end; }
+  .msg-who { font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
   .msg.assistant .msg-who { color: var(--accent); }
-  .msg-body { font-size: 14.5px; line-height: 1.6; overflow-wrap: anywhere; }
+  .msg-body { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+  .msg.user .msg-body {
+    background: rgba(45, 212, 191, .09); border: 1px solid rgba(45, 212, 191, .2);
+    border-radius: 14px 14px 5px 14px; padding: 10px 14px;
+    max-width: min(100%, 68ch); width: fit-content;
+  }
+  .msg.assistant .msg-body {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 5px 14px 14px 14px; padding: 12px 16px; width: 100%;
+  }
+  .msg.user .msg-body .md-p { margin: 0; }
   .msg-body .md-p { margin: 0 0 8px; }
+  .msg-body .md-p:last-child { margin-bottom: 0; }
   .msg-body .md-h { font-weight: 700; margin: 12px 0 6px; letter-spacing: -.01em; }
   .msg-body .md-h1 { font-size: 19px; } .msg-body .md-h2 { font-size: 17px; } .msg-body .md-h3 { font-size: 15.5px; }
   .msg-body .md-li { margin: 2px 0; }
   .msg-body .md-quote { border-left: 2px solid var(--border-strong); padding-left: 10px; color: var(--muted); margin: 6px 0; }
   .msg-body pre.code { background: #0C0C0E; border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; margin: 9px 0; }
   .msg-body pre.code code { background: none; padding: 0; font-size: inherit; }
-  .msg-body code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+  .msg-body code { font-family: var(--mono); font-size: .9em; background: var(--surface-3); padding: 1px 5px; border-radius: 5px; }
   .code-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; }
-  .copy-code { font: 600 10.5px var(--font); color: var(--muted); background: transparent; border: 1px solid var(--border-strong); border-radius: 5px; padding: 2px 7px; cursor: pointer; }
+  .copy-code { font: 600 11px var(--font); color: var(--muted); background: transparent; border: 1px solid var(--border-strong); border-radius: 5px; padding: 2px 7px; cursor: pointer; }
   .copy-code:hover { color: var(--text); border-color: var(--accent); }
   .msg-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
   .copy-msg { font: 600 11px var(--font); color: var(--faint); background: transparent; border: none; padding: 2px 4px; cursor: pointer; }
@@ -309,15 +311,10 @@
   .chat-input textarea:focus { outline: none; border-color: var(--accent); }
   .chat-input-bar { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
   .chat-input-bar #chatCounter { margin-right: auto; font-size: 12px; }
-  @media (max-width: 920px) {
-    .chat-layout { grid-template-columns: 1fr; height: auto; }
-    .chat-main { height: 72vh; }
-    .chat-side { order: 2; }
-  }
 
   /* ---------- modal ---------- */
   .overlay {
-    position: fixed; inset: 0; background: rgba(4,4,5,.74);
+    position: fixed; inset: 0; background: rgba(4,4,5,.74); backdrop-filter: blur(4px);
     display: none; place-items: center; z-index: 50; padding: 20px;
   }
   .overlay.show { display: grid; }
@@ -342,24 +339,46 @@
 
   /* ---------- motion (one authored moment, on tab open) ---------- */
   @media (prefers-reduced-motion: no-preference) {
-    .tabpanel.active > *, .tabpanel.active .panel, .tabpanel.active .account, .tabpanel.active .credits {
-      animation: rise .4s cubic-bezier(.22,1,.36,1) both;
-    }
+    .tabpanel.active > * { animation: rise .4s cubic-bezier(.22,1,.36,1) both; }
     .tabpanel.active > *:nth-child(2) { animation-delay: .05s; }
     .tabpanel.active > *:nth-child(3) { animation-delay: .1s; }
     .tabpanel.active > *:nth-child(4) { animation-delay: .15s; }
-    .tabpanel.active > *:nth-child(5) { animation-delay: .2s; }
   }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
   }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 980px) {
+    .shell { display: block; }
+    .side {
+      position: static; height: auto; flex-direction: row; flex-wrap: wrap;
+      align-items: center; gap: 12px 14px; padding: 12px 18px;
+      border-right: 0; border-bottom: 1px solid var(--border);
+    }
+    .brand { margin-right: auto; padding: 0; }
+    .tabs { order: 3; flex-direction: row; width: 100%; margin-top: 2px; overflow-x: auto; padding-bottom: 2px; }
+    .tab { width: auto; }
+    .tab.active::before { left: 9px; right: 9px; top: auto; bottom: 0; width: auto; height: 2px; }
+    .side-foot { flex-direction: row; align-items: center; gap: 10px; }
+    .synced { display: none; }
+    .content { padding: 16px 18px 40px; }
+    .grid-charts { grid-template-columns: 1fr; }
+    .setup .cols { grid-template-columns: 1fr; }
+    .statrow { gap: 10px 24px; }
+  }
+  @media (max-width: 920px) {
+    .chat-layout { grid-template-columns: 1fr; height: auto; }
+    .chat-main { height: 72vh; }
+    .chat-side { order: 2; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="shell">
 
-  <header class="topbar">
+  <aside class="side">
     <div class="brand">
       <div class="mark">π</div>
       <div>
@@ -367,85 +386,93 @@
         <div class="sub">local control center</div>
       </div>
     </div>
-    <div class="sp"></div>
-    <div class="status" id="statusPill" role="status" aria-live="polite"><span class="dot"></span><span id="statusTxt">connecting…</span></div>
-    <div class="top-actions">
-      <button id="refreshBtn" aria-label="Refresh dashboard">Refresh</button>
-      <button id="loginBtn">Log in</button>
+
+    <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+      <button class="tab active" role="tab" id="tabbtn-overview" data-tab="overview" aria-controls="tab-overview" aria-selected="true">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h8V3H3z"/><path d="M13 21h8v-8h-8z"/><path d="M13 9h8V3h-8z"/><path d="M3 21h8v-4H3z"/></svg>
+        Overview</button>
+      <button class="tab" role="tab" id="tabbtn-chat" data-tab="chat" aria-controls="tab-chat" aria-selected="false" tabindex="-1">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chat</button>
+      <button class="tab" role="tab" id="tabbtn-activity" data-tab="activity" aria-controls="tab-activity" aria-selected="false" tabindex="-1">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+        Activity</button>
+      <button class="tab" role="tab" id="tabbtn-models" data-tab="models" aria-controls="tab-models" aria-selected="false" tabindex="-1">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></svg>
+        Models</button>
+      <button class="tab" role="tab" id="tabbtn-setup" data-tab="setup" aria-controls="tab-setup" aria-selected="false" tabindex="-1">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5 4.6l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-4.6l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+        Setup</button>
+    </nav>
+
+    <div class="side-sp"></div>
+    <div class="side-foot">
+      <div class="status" id="statusPill" role="status" aria-live="polite"><span class="dot"></span><span id="statusTxt">connecting…</span></div>
+      <div class="side-actions">
+        <button id="refreshBtn" aria-label="Refresh dashboard">Refresh</button>
+        <button id="loginBtn">Log in</button>
+      </div>
+      <div class="synced faint" id="updatedTxt">connecting…</div>
     </div>
-  </header>
+  </aside>
 
-  <div class="notice" id="notice" role="alert">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-    <span id="noticeTxt"></span>
-  </div>
+  <main class="content">
+    <div class="page">
+      <div class="notice" id="notice" role="alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+        <span id="noticeTxt"></span>
+      </div>
 
-  <nav class="tabs" role="tablist" aria-label="Dashboard sections">
-    <button class="tab active" role="tab" id="tabbtn-overview" data-tab="overview" aria-controls="tab-overview" aria-selected="true">
-      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h8V3H3z"/><path d="M13 21h8v-8h-8z"/><path d="M13 9h8V3h-8z"/><path d="M3 21h8v-4H3z"/></svg>
-      Overview</button>
-    <button class="tab" role="tab" id="tabbtn-chat" data-tab="chat" aria-controls="tab-chat" aria-selected="false" tabindex="-1">
-      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      Chat</button>
-    <button class="tab" role="tab" id="tabbtn-activity" data-tab="activity" aria-controls="tab-activity" aria-selected="false" tabindex="-1">
-      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
-      Activity</button>
-    <button class="tab" role="tab" id="tabbtn-models" data-tab="models" aria-controls="tab-models" aria-selected="false" tabindex="-1">
-      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></svg>
-      Models</button>
-    <button class="tab" role="tab" id="tabbtn-setup" data-tab="setup" aria-controls="tab-setup" aria-selected="false" tabindex="-1">
-      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5 4.6l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-4.6l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
-      Setup</button>
-  </nav>
-
-  <main>
     <!-- ================= OVERVIEW ================= -->
     <section class="tabpanel active" id="tab-overview" role="tabpanel" aria-labelledby="tabbtn-overview">
-      <section class="account" aria-label="Account">
-        <div class="item"><span class="k">Account</span><span class="v mono" id="acctHandle">–</span></div>
-        <div class="item"><span class="k">Tier</span><span class="v" id="acctTier">–</span></div>
-        <div class="item"><span class="k">Lane</span><span class="v" id="acctLane">–</span></div>
-        <div class="item"><span class="k">Streak</span><span class="v" id="acctStreak">–</span></div>
-        <div class="item"><span class="k">Refills in</span><span class="v mono" id="acctRefill">–</span></div>
-        <div class="item"><span class="k">Requests today</span><span class="v mono" id="acctReqs">–</span></div>
-        <div class="item"><span class="k">Tokens today</span><span class="v mono" id="acctToks">–</span></div>
-      </section>
-
-      <section class="credits" aria-label="Credits">
-        <div>
-          <div class="label">Credits remaining</div>
-          <div class="num"><span id="creditsLeft">–</span><span class="unit">credits left today</span></div>
-          <div class="track"><div id="creditsBar"></div></div>
-          <div class="meta">
-            <span id="creditsOf">of – allowed / day</span>
+      <section class="hero" aria-label="Credits and account">
+        <div class="hero-top">
+          <span class="hero-label">Credits remaining today</span>
+          <span class="hero-id"><span id="acctHandle">–</span><span class="sep">·</span><span id="acctTier">–</span></span>
+        </div>
+        <div class="hero-num"><span id="creditsLeft">–</span><span class="unit">credits left today</span></div>
+        <div class="track"><div id="creditsBar"></div></div>
+        <div class="hero-meta">
+          <span id="creditsOf">of – allowed / day</span>
+          <span class="right">
+            <span class="refill">refills in <b id="acctRefill">–</b></span>
             <span class="pct" id="creditsPct">–</span>
-          </div>
+          </span>
         </div>
-        <div class="minis">
-          <div class="mini"><span class="k">Proxy uptime</span><span class="v" id="uptime">–</span></div>
-          <div class="mini"><span class="k">Seen by proxy</span><span class="v" id="proxyReqs">–</span></div>
-          <div class="mini"><span class="k">Est. burn 24h</span><span class="v" id="burn24">–</span></div>
+        <div class="statrow">
+          <div class="item"><span class="k">lane</span><span class="v" id="acctLane">–</span></div>
+          <div class="item"><span class="k">streak</span><span class="v" id="acctStreak">–</span></div>
+          <div class="item"><span class="k">requests today</span><span class="v mono" id="acctReqs">–</span></div>
+          <div class="item"><span class="k">tokens today</span><span class="v mono" id="acctToks">–</span></div>
+          <div class="item"><span class="k">proxy uptime</span><span class="v mono" id="uptime">–</span></div>
+          <div class="item"><span class="k">seen by proxy</span><span class="v mono" id="proxyReqs">–</span></div>
+          <div class="item"><span class="k">est. burn 24h</span><span class="v mono" id="burn24">–</span></div>
         </div>
       </section>
 
-      <section class="panel" aria-label="Usage over time">
-        <div class="panel-head">
-          <h2>Burn · last 24 hours</h2>
-          <span class="hint" id="burnSum"></span>
-        </div>
-        <svg class="chart" id="burnChart" viewBox="0 0 1000 120" preserveAspectRatio="none" role="img" aria-label="Credits burned per hour"></svg>
-        <div class="chart-legend">
-          <span><i style="background:var(--accent)"></i>credits</span>
-          <span><i style="background:#2A2A32"></i>requests</span>
-        </div>
-      </section>
+      <div class="grid-charts">
+        <section class="panel" aria-label="Burn last 24 hours">
+          <div class="panel-head"><h2>Burn · last 24 hours</h2><span class="hint" id="burnSum"></span></div>
+          <svg class="chart" id="burnChart" viewBox="0 0 1000 120" preserveAspectRatio="none" role="img" aria-label="Credits burned per hour"></svg>
+          <div class="chart-legend">
+            <span><i style="background:var(--accent)"></i>credits</span>
+            <span><i style="background:#2A2A32"></i>requests</span>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="Usage last 14 days">
+          <div class="panel-head"><h2>Usage · last 14 days</h2><span class="hint" id="daySum"></span></div>
+          <svg class="chart" id="dayChart" viewBox="0 0 1000 120" preserveAspectRatio="none" role="img" aria-label="Credits burned per day"></svg>
+          <div class="chart-legend"><span><i style="background:var(--accent)"></i>credits / day</span></div>
+        </section>
+      </div>
 
       <section class="adcard" id="adcard" aria-label="Advertisement">
         <span class="adtag">Ad</span>
         <div class="adbody">
           <div class="ah" id="adHeadline">–</div>
           <div class="ab" id="adText"></div>
-          <div class="why">Ads fund your free inference — showing this keeps completions active.</div>
+          <div class="why">Ads fund your free inference — impressions are reported to keep completions active.</div>
         </div>
         <a class="adcta" id="adCta" href="#" target="_blank" rel="noopener">Open</a>
       </section>
@@ -480,7 +507,7 @@
             <button id="newChat">New chat</button>
             <button id="exportChat">Export</button>
           </div>
-          <div class="side-foot">
+          <div class="side-foot-note">
             <div id="chatModelCat"></div>
             <div style="margin-top:8px">Messages route through your local proxy and count against the shared daily allowance.</div>
           </div>
@@ -513,7 +540,7 @@
         <div class="tablewrap">
           <table>
             <thead><tr><th>day</th><th class="num">requests</th><th class="num">tokens</th><th class="num">credits</th><th class="num">errors</th></tr></thead>
-            <tbody id="daysBody"><tr><td colspan="5" class="empty">no data yet</td></tr></tbody>
+            <tbody id="daysBody"><tr><td colspan="5" class="empty">no data yet — usage appears here as requests come in</td></tr></tbody>
           </table>
         </div>
       </section>
@@ -556,10 +583,19 @@
     <!-- ================= SETUP ================= -->
     <section class="tabpanel" id="tab-setup" role="tabpanel" aria-labelledby="tabbtn-setup" hidden>
       <section class="panel setup" aria-label="Connect an agent">
-        <div class="panel-head"><h2>Connect an agent</h2><span class="hint">OpenAI-compatible · no key needed</span></div>
+        <div class="panel-head"><h2>Connect an agent</h2><span class="hint">OpenAI-compatible · no API key needed</span></div>
         <div class="cols">
           <div>
-            <div class="head"><b>OpenCode</b><button class="copy" data-copy="oc">copy</button></div>
+            <div class="head"><span class="step">1</span><b>Any agent or SDK</b><button class="copy" data-copy="env">copy</button></div>
+            <pre id="env">OPENAI_BASE_URL = http://127.0.0.1:PORT/v1
+OPENAI_API_KEY  = local
+
+# MCP tools (image, web search, docs, usage):
+#   http://127.0.0.1:PORT/mcp</pre>
+            <p class="note">The proxy injects your free-pi token on every request — your agent never sees a key.</p>
+          </div>
+          <div>
+            <div class="head"><span class="step">2</span><b>OpenCode</b><button class="copy" data-copy="oc">copy</button></div>
             <pre id="oc">~/.config/opencode/opencode.json
 {
   "providers": {
@@ -568,25 +604,16 @@
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": { "baseURL": "http://127.0.0.1:PORT/v1", "apiKey": "local" },
       "models": {
-        "glm-5.3-flash":     { "name": "GLM 5.3 Flash (free)" },
-        "deepseek-v4-flash": { "name": "DeepSeek V4 Flash (free)" },
-        "gpt-6-luna":        { "name": "GPT-6 Luna (~2x)" }
+        "particle":          { "name": "Particle" },
+        "glm-5.3-flash":     { "name": "GLM 5.3 Flash" },
+        "deepseek-v4-flash": { "name": "DeepSeek V4 Flash" }
       }
     }
   },
   "mcp": { "freepi-tools": { "type": "remote", "url": "http://127.0.0.1:PORT/mcp", "enabled": true } }
 }</pre>
-            <p class="note">The proxy injects your free-pi JWT on every request — OpenCode never sees a key.</p>
-          </div>
-          <div>
-            <div class="head"><b>Any OpenAI-compatible agent</b><button class="copy" data-copy="env">copy</button></div>
-            <pre id="env">OPENAI_BASE_URL = http://127.0.0.1:PORT/v1
-OPENAI_API_KEY  = local
-
-# MCP tools (image, web search, docs, usage):
-#   http://127.0.0.1:PORT/mcp</pre>
-            <p class="note">Daily allowance is shared across clients. The 1× free-unlimited models are the
-              cheap ones; premium models burn it up to ~295× faster.</p>
+            <p class="note">Daily allowance is shared across all clients. The free-unlimited promo models
+              are the cheap ones; premium models burn it up to ~295× faster.</p>
           </div>
         </div>
       </section>
@@ -597,22 +624,22 @@ OPENAI_API_KEY  = local
           <dt>Endpoint</dt><dd class="mono">http://127.0.0.1:<span id="kvPort">8452</span>/v1</dd>
           <dt>MCP tools</dt><dd>generate_image · web_search · docs_lookup · check_usage</dd>
           <dt>Auth</dt><dd>Free-pi JWT stored at <span class="mono">~/.free-pi/agent/credentials.json</span></dd>
-          <dt>Ad support</dt><dd>Keep the Overview tab open — the visible ad reports an impression that keeps completions active.</dd>
+          <dt>Ad support</dt><dd>The proxy runs free-pi's ad cycle itself on every request, mirroring the CLI. The Overview tab shows the live ad as an additional impression surface.</dd>
           <dt>Data</dt><dd class="mono">~/.freepi-proxy/requests.jsonl</dd>
           <dt>Notice</dt><dd>Ads fund inference; sessions may be used for training (freepi.ai/privacy).</dd>
         </dl>
       </section>
     </section>
+      <footer>
+        <span id="footUp">uptime –</span>
+        <span class="mono">log: ~/.freepi-proxy/requests.jsonl</span>
+        <span>upstream <span class="mono" id="footUpstream"></span></span>
+        <span class="sp"></span>
+        <span>freepi-proxy · zero-dependency · MIT</span>
+      </footer>
+    </div><!-- /.page -->
   </main>
-
-  <footer>
-    <span id="footUp">uptime –</span>
-    <span class="mono">log: ~/.freepi-proxy/requests.jsonl</span>
-    <span>upstream <span class="mono" id="footUpstream"></span></span>
-    <span class="sp"></span>
-    <span>freepi-proxy · zero-dependency</span>
-  </footer>
-</div>
+</div><!-- /.shell -->
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
   <div class="modal">
@@ -637,11 +664,15 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;","
 
 let S = null;
 let lastRender = {};
+let lastLoadAt = 0;
 
 async function load() {
   if (document.hidden) return;
-  try { S = await (await fetch("/api/state")).json(); render(); }
-  catch { $("statusTxt").textContent = "proxy unreachable"; }
+  try { S = await (await fetch("/api/state")).json(); render(); lastLoadAt = Date.now(); }
+  catch {
+    $("statusTxt").textContent = "proxy unreachable";
+    $("updatedTxt").textContent = "offline — retrying…";
+  }
 }
 
 function setTxt(id, v) { if (lastRender[id] !== v) { lastRender[id] = v; $(id).textContent = v; } }
@@ -671,7 +702,8 @@ function renderAccount() {
   setTxt("acctToks", kfmt((L.prompt_tokens_today ?? 0) + (L.completion_tokens_today ?? 0)));
 
   if (L.refill_at) {
-    const ms = new Date(L.refill_at + "Z") - Date.now();
+    // API timestamps already end in "Z" — only append for bare datetime strings
+    const ms = new Date(/Z$|[+-]\d{2}:?\d{2}$/.test(L.refill_at) ? L.refill_at : L.refill_at + "Z") - Date.now();
     const h = Math.max(0, Math.floor(ms / 3600000));
     const m = Math.max(0, Math.floor((ms % 3600000) / 60000));
     setTxt("acctRefill", `${h}h ${m}m`);
@@ -714,6 +746,28 @@ function renderBurn() {
   const sum = H.reduce((a, h) => a + h.credits, 0);
   const sumReq = H.reduce((a, h) => a + h.requests, 0);
   setTxt("burnSum", `${fmt(Math.round(sum))} credits · ${sumReq} requests · estimated`);
+}
+
+function renderDayChart() {
+  if (!S.days) return;
+  const D = S.days, W = 1000, CH = 112, gap = 14, bw = (W - gap * (D.length - 1)) / D.length;
+  const maxC = Math.max(1, ...D.map(d => d.credits));
+  let svg = `<line x1="0" y1="${CH}" x2="${W}" y2="${CH}" stroke="#232329" stroke-width="1"/>`;
+  D.forEach((d, i) => {
+    const x = i * (bw + gap);
+    const label = new Date(d.ts).toLocaleDateString([], { month: "short", day: "numeric" });
+    if (d.credits > 0) {
+      const ch = d.credits / maxC * (CH - 10);
+      svg += `<rect x="${x.toFixed(1)}" y="${(CH - ch).toFixed(1)}" width="${bw.toFixed(1)}" height="${ch.toFixed(1)}" rx="3" fill="var(--accent)" opacity=".8"><title>${label}: ${Math.round(d.credits)} credits · ${d.requests} requests</title></rect>`;
+    } else {
+      svg += `<rect x="${x.toFixed(1)}" y="${(CH - 2).toFixed(1)}" width="${bw.toFixed(1)}" height="2" rx="1" fill="#232329"><title>${label}: no usage</title></rect>`;
+    }
+  });
+  const key = D.map(d => Math.round(d.credits)).join(",");
+  if (lastRender.dayChart !== key) { lastRender.dayChart = key; $("dayChart").innerHTML = svg; }
+  const sum = D.reduce((a, d) => a + d.credits, 0);
+  const sumReq = D.reduce((a, d) => a + d.requests, 0);
+  setTxt("daySum", `${fmt(Math.round(sum))} cr · ${fmt(sumReq)} req · 14 days`);
 }
 
 function renderModels() {
@@ -792,26 +846,36 @@ $("logNext").onclick = () => { logPage++; renderLog(); };
 
 const multOf = (n) => /~([\d.]+)x/.exec(n)?.[1] ?? "1";
 const cleanName = (n) => n.replace(/·[^·]*$/, "").replace(/🔥+/g, "").trim();
+const CAT_LABELS = { free: "Free Unlimited", standard: "Standard", uncensored: "Uncensored / Abliterated", premium: "Premium / Heavy", unavailable: "Unavailable" };
+const CAT_ORDER = ["free", "standard", "uncensored", "premium", "unavailable"];
 function renderCatalog() {
   if (!S.catalog) return;
-  const rows = S.catalog.models.map(m => {
-    const c = chatCategory(m);
-    let chip;
-    if (c === "unavailable") chip = `<span class="chip off">offline</span>`;
-    else if (c === "uncensored") chip = `<span class="chip hot">uncensored</span>`;
-    else if (c === "premium") chip = `<span class="chip hot">premium</span>`;
-    else if (c === "free") chip = `<span class="chip free">unlimited</span>`;
-    else chip = `<span class="chip">${multOf(m.name)}×</span>`;
-    return `<tr>
-      <td>${esc(cleanName(m.name))}</td>
-      <td class="id">${esc(m.id)}</td>
-      <td class="num mono">${m.unavailable ? "–" : multOf(m.name) + "×"}</td>
-      <td>${chip}</td>
-    </tr>`;
-  }).join("");
-  const key = rows.length + S.catalog.models.length;
+  const groups = {};
+  for (const m of S.catalog.models) (groups[chatCategory(m)] ??= []).push(m);
+  let rows = "";
+  for (const cat of CAT_ORDER) {
+    const list = groups[cat];
+    if (!list || !list.length) continue;
+    rows += `<tr class="cat-row"><td colspan="4">${CAT_LABELS[cat]}<span class="faint"> · ${list.length}</span></td></tr>`;
+    rows += list.map(m => {
+      const c = chatCategory(m);
+      let chip;
+      if (c === "unavailable") chip = `<span class="chip off">offline</span>`;
+      else if (c === "uncensored") chip = `<span class="chip hot">uncensored</span>`;
+      else if (c === "premium") chip = `<span class="chip hot">premium</span>`;
+      else if (c === "free") chip = `<span class="chip free">unlimited</span>`;
+      else chip = `<span class="chip">${multOf(m.name)}×</span>`;
+      return `<tr>
+        <td>${esc(cleanName(m.name))}</td>
+        <td class="id">${esc(m.id)}</td>
+        <td class="num mono">${m.unavailable ? "–" : multOf(m.name) + "×"}</td>
+        <td>${chip}</td>
+      </tr>`;
+    }).join("");
+  }
+  const key = S.catalog.models.map(m => m.id + (m.unavailable ? "!" : "")).join(",");
   if (lastRender.catalog !== key) { lastRender.catalog = key; $("catalogBody").innerHTML = rows; }
-  setTxt("catalogHint", `${S.catalog.models.length} models`);
+  setTxt("catalogHint", `${S.catalog.models.length} models · grouped`);
 }
 
 function renderDays() {
@@ -836,11 +900,19 @@ function renderDays() {
 }
 
 function render() {
-  renderStatus(); renderAccount(); renderBurn(); renderModels(); renderLog(); renderCatalog(); renderModelSelect(); renderDays();
+  renderStatus(); renderAccount(); renderBurn(); renderDayChart(); renderModels(); renderLog(); renderCatalog(); renderModelSelect(); renderDays();
   document.querySelectorAll("#oc,#env").forEach(pre => {
     if (!pre.dataset.ported) { pre.dataset.ported = "1"; pre.innerHTML = pre.innerHTML.replace(/PORT/g, S.server.proxyPort); }
   });
 }
+
+// ---------- sync ticker ----------
+function tickSync() {
+  if (!lastLoadAt) return;
+  const s = Math.round((Date.now() - lastLoadAt) / 1000);
+  $("updatedTxt").textContent = s < 4 ? "synced just now" : s < 60 ? `synced ${s}s ago` : `synced ${Math.round(s / 60)}m ago`;
+}
+setInterval(tickSync, 1000);
 
 // ---------- tabs ----------
 const tabBtns = Array.from(document.querySelectorAll(".tab"));
