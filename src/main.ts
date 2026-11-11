@@ -56,6 +56,7 @@ function apiState(): ReturnType<typeof JSON.stringify> {
     },
     recent: tracker.recent(250),
     hourly: tracker.hourly(24),
+    days: tracker.byDay(14),
     models: tracker.byModel(3),
     catalog: upstream.catalog ? {
       fetchedAt: upstream.catalog.fetchedAt,

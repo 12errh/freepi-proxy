@@ -508,6 +508,16 @@
 
     <!-- ================= ACTIVITY ================= -->
     <section class="tabpanel" id="tab-activity" role="tabpanel" aria-labelledby="tabbtn-activity" hidden>
+      <section class="panel" aria-label="Usage by day">
+        <div class="panel-head"><h2>Usage by day</h2><span class="hint" id="daysHint"></span></div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>day</th><th class="num">requests</th><th class="num">tokens</th><th class="num">credits</th><th class="num">errors</th></tr></thead>
+            <tbody id="daysBody"><tr><td colspan="5" class="empty">no data yet</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="panel" aria-label="Recent requests">
         <div class="panel-head"><h2>Recent requests</h2><span class="hint" id="logHint"></span></div>
         <div class="tablewrap">
@@ -790,7 +800,7 @@ function renderCatalog() {
     if (c === "unavailable") chip = `<span class="chip off">offline</span>`;
     else if (c === "uncensored") chip = `<span class="chip hot">uncensored</span>`;
     else if (c === "premium") chip = `<span class="chip hot">premium</span>`;
-    else if (c === "free") chip = `<span class="chip free">best value</span>`;
+    else if (c === "free") chip = `<span class="chip free">unlimited</span>`;
     else chip = `<span class="chip">${multOf(m.name)}×</span>`;
     return `<tr>
       <td>${esc(cleanName(m.name))}</td>
@@ -804,8 +814,29 @@ function renderCatalog() {
   setTxt("catalogHint", `${S.catalog.models.length} models`);
 }
 
+function renderDays() {
+  if (!S.days) return;
+  const today = new Date().toDateString();
+  const rows = [...S.days].reverse().map(d => {
+    const day = new Date(d.ts).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+    const isToday = new Date(d.ts).toDateString() === today;
+    const tok = (d.pt + d.ct) ? fmt(d.pt + d.ct) : "–";
+    const cr = d.credits ? (d.credits % 1 ? d.credits.toFixed(1) : fmt(Math.round(d.credits))) : "–";
+    return `<tr>
+      <td>${esc(day)}${isToday ? ' <span class="chip src">today</span>' : ""}</td>
+      <td class="num mono">${d.requests ? fmt(d.requests) : "–"}</td>
+      <td class="num mono">${tok}</td>
+      <td class="num mono">${cr}</td>
+      <td class="num mono">${d.errors || "–"}</td>
+    </tr>`;
+  }).join("");
+  const key = rows.length + ":" + S.days.map(d => `${d.requests}|${d.pt + d.ct}|${d.credits ?? 0}|${d.errors}`).join(";");
+  if (lastRender.days !== key) { lastRender.days = key; $("daysBody").innerHTML = rows; }
+  setTxt("daysHint", "last 14 days · local time");
+}
+
 function render() {
-  renderStatus(); renderAccount(); renderBurn(); renderModels(); renderLog(); renderCatalog(); renderModelSelect();
+  renderStatus(); renderAccount(); renderBurn(); renderModels(); renderLog(); renderCatalog(); renderModelSelect(); renderDays();
   document.querySelectorAll("#oc,#env").forEach(pre => {
     if (!pre.dataset.ported) { pre.dataset.ported = "1"; pre.innerHTML = pre.innerHTML.replace(/PORT/g, S.server.proxyPort); }
   });
@@ -829,7 +860,7 @@ function activate(name, focus = false) {
   });
   try { localStorage.setItem("freepi-tab", name); } catch {}
 }
-tabBtns.forEach(b => b.addEventListener("click", () => { activate(b.dataset.tab); if (b.dataset.tab === "overview") loadAd(); }));
+tabBtns.forEach(b => b.addEventListener("click", () => { activate(b.dataset.tab); if (b.dataset.tab === "overview") loadAd(true); }));
 document.querySelector(".tabs").addEventListener("keydown", (e) => {
   const i = tabBtns.findIndex(b => b.classList.contains("active"));
   if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
@@ -847,9 +878,21 @@ load();
 setInterval(load, 5000);
 
 // ---------- ads (real impression, reported — keeps completions unpaused) ----------
+// Cadence mirrors free-pi-cli's banner renderer: forced render when the
+// Overview tab opens (session_start analog), a refresh whenever the page
+// becomes visible or focused (turn_end analog) throttled to one render per
+// minute, and a 10-minute idle interval. Every /ads/next call mints a fresh
+// click_token server-side, so the impression below posts once per fetched ad
+// — the same dedup the CLI uses — and new creatives are picked up as the
+// server rotates them.
 let lastAdToken = null;
-async function loadAd() {
+const BANNER_REFRESH_MS = 10 * 60 * 1000;
+const BANNER_MIN_REFRESH_MS = 60 * 1000;
+let adInFlight = false, lastAdAt = 0;
+async function loadAd(force = false) {
   if (document.hidden) return;
+  if (!force && (adInFlight || Date.now() - lastAdAt < BANNER_MIN_REFRESH_MS)) return;
+  adInFlight = true;
   const adVisible = !$("tab-overview").hidden;   // only report what is actually on screen
   try {
     const r = await fetch("/api/ads/next?slot=banner");
@@ -881,13 +924,17 @@ async function loadAd() {
       }).catch(() => {});
     }
   } catch { /* best-effort */ }
+  finally { adInFlight = false; lastAdAt = Date.now(); }
 }
-loadAd(); setInterval(loadAd, 5 * 60 * 1000);
+loadAd(true);
+setInterval(() => void loadAd(), BANNER_REFRESH_MS);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) void loadAd(); });
+window.addEventListener("focus", () => void loadAd());
 
 // ---------- chat ----------
 const CHAT_KEY = "freepi-chat-v1";
 const CHAT_CATS = [
-  ["free", "Best value"],
+  ["free", "Free Unlimited"],
   ["standard", "Standard"],
   ["uncensored", "Uncensored / Abliterated"],
   ["premium", "Premium / Heavy"],
@@ -897,7 +944,7 @@ function chatCategory(m) {
   if (m.unavailable) return "unavailable";
   if (m.section === "defense" || /abliterated|uncensored|heretic|darkbloom/i.test(m.name)) return "uncensored";
   if (/premium/i.test(m.name) || (m.multiplier ?? 1) >= 10) return "premium";
-  if ((m.multiplier ?? 1) <= 1) return "free";
+  if (/free unlimited/i.test(m.name) || (m.multiplier ?? 1) <= 1) return "free";
   return "standard";
 }
 function loadChat() {
@@ -944,14 +991,15 @@ function updateModelMeta() {
   if (!m) { meta.innerHTML = ""; cat.innerHTML = ""; return; }
   const c = chatCategory(m);
   const chip = c === "uncensored" ? `<span class="chip hot">uncensored</span>`
-    : c === "free" ? `<span class="chip free">best value</span>`
+    : c === "free" ? `<span class="chip free">unlimited</span>`
     : c === "premium" ? `<span class="chip hot">premium</span>`
     : c === "unavailable" ? `<span class="chip off">offline</span>`
     : `<span class="chip">${m.multiplier}×</span>`;
   meta.innerHTML = `<div class="meta-row">${chip}<span class="faint">context 1M · out 8K</span></div>`;
   cat.innerHTML = c === "uncensored"
     ? `<span class="warn">Uncensored / abliterated model — output is unfiltered.</span>`
-    : c === "premium" ? `<span class="warn">Premium model — burns allowance fast.</span>` : "";
+    : c === "premium" ? `<span class="warn">Premium model — burns allowance fast.</span>`
+    : c === "free" ? `<span class="faint">Free-unlimited promo — while it lasts this tier does not burn the normal allowance.</span>` : "";
 }
 
 // --- tiny safe markdown (escapes first, protects code) ---

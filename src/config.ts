@@ -23,8 +23,9 @@ export const SESSION_ID_PATH = join(DATA_DIR, "session-id");
 /** Consent version free-pi-cli 0.6.x submits during login (src/consent.ts). */
 export const CONSENT_VERSION = "4";
 
-/** Header the server's forced-update gate reads; we send the catalog's latest. */
-export const FALLBACK_CLIENT_VERSION = "0.6.15";
+/** Header the server's forced-update gate reads; we send the catalog's latest
+ * (refreshed live at startup), or this floor if the catalog fetch fails. */
+export const FALLBACK_CLIENT_VERSION = "0.6.19";
 
 /** Public catalog refresh cadence. */
 export const CATALOG_REFRESH_MS = 10 * 60 * 1000;

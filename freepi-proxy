@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve this script through symlinks (e.g. ~/.local/bin/freepi-proxy) so DIR
+# always points at the real checkout, not the directory containing the link.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 PORT="${FREEPI_PROXY_PORT:-8452}"
 BASE="http://127.0.0.1:${PORT}"
 DATA="${HOME}/.freepi-proxy"

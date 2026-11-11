@@ -65,10 +65,21 @@ export async function handleCompletions(req: Request, ctx: Ctx): Promise<Respons
   } catch { /* let upstream reject */ }
 
   const source = new URL(req.url).searchParams.get("source") || "api";
+
+  // Every proxied request is a new CLI-style "turn": the free-pi server links
+  // completions to the turn id whose ad cycle ran (measured: a fresh turn id
+  // without an ad cycle is paused with ads_required; the turn id that had one
+  // completes freely). So mint a turn id per request, run the ad cycle on it
+  // (fetch ad → fire impression pixel → report impression), and send the same
+  // turn id on the completion — exactly the sequence free-pi-cli produces.
+  const turnId = crypto.randomUUID();
+  ctx.upstream.runAdCycle(jwt, ctx.state.sessionId, turnId, ctx.getGravityContext?.());
+
   let upstream: Response;
   try {
     upstream = await ctx.upstream.completions(jwt, raw, req.signal, {
       sessionId: ctx.state.sessionId,
+      turnId,
       gravityContext: ctx.getGravityContext?.(),
     });
   } catch (e) {

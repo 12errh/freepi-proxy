@@ -22,6 +22,7 @@ export interface RequestEntry {
 
 export interface HourBucket { ts: number; credits: number; requests: number; pt: number; ct: number }
 export interface ModelBucket { model: string; credits: number; requests: number; pt: number; ct: number; multiplier: number }
+export interface DayBucket { ts: number; requests: number; pt: number; ct: number; credits: number; errors: number }
 
 export function newTracker() {
   const entries: RequestEntry[] = [];
@@ -95,6 +96,30 @@ export function newTracker() {
         b.pt += e.pt;
         b.ct += e.ct;
         b.credits += e.credits ?? 0;
+      }
+      return buckets;
+    },
+    /** Aggregate by local calendar day (last `days` days, oldest first). */
+    byDay(days: number): DayBucket[] {
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const buckets: DayBucket[] = Array.from({ length: days }, (_, i) => ({
+        ts: startOfToday - (days - 1 - i) * 86_400_000, requests: 0, pt: 0, ct: 0, credits: 0, errors: 0,
+      }));
+      const dayIndex = (ts: number): number => {
+        const d = new Date(ts);
+        const midnight = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        return Math.round((midnight - buckets[0]!.ts) / 86_400_000);
+      };
+      for (const e of entries) {
+        const idx = dayIndex(e.ts);
+        if (idx < 0 || idx >= days) continue;
+        const b = buckets[idx]!;
+        b.requests++;
+        b.pt += e.pt;
+        b.ct += e.ct;
+        b.credits += e.credits ?? 0;
+        if (e.status < 200 || e.status >= 400) b.errors++;
       }
       return buckets;
     },

@@ -143,10 +143,25 @@ export class Upstream {
     );
   }
 
+  /** Locale/os headers the 0.6.19 CLI attaches to ad calls. */
+  clientEnvHeaders(): Record<string, string> {
+    const out: Record<string, string> = {
+      "x-client-os": process.platform,
+      "x-client-arch": process.arch,
+    };
+    try {
+      const o = new Intl.DateTimeFormat().resolvedOptions();
+      if (o.timeZone) out["x-client-timezone"] = o.timeZone;
+      if (o.locale) out["x-client-locale"] = o.locale;
+    } catch { /* ignore */ }
+    return out;
+  }
+
   /** POST /v1/chat/completions — returns the raw upstream Response for streaming. */
-  completions(jwt: string, body: string, signal: AbortSignal, opts?: { sessionId?: string; gravityContext?: string }): Promise<Response> {
+  completions(jwt: string, body: string, signal: AbortSignal, opts?: { sessionId?: string; turnId?: string; gravityContext?: string }): Promise<Response> {
     const extra: Record<string, string> = {};
     if (opts?.sessionId) extra["x-session-id"] = opts.sessionId;
+    if (opts?.turnId) extra["x-turn-id"] = opts.turnId;
     if (opts?.gravityContext) extra["x-gravity-context"] = opts.gravityContext;
     return fetch(new URL("/v1/chat/completions", BASE_URL), {
       method: "POST",
@@ -160,11 +175,16 @@ export class Upstream {
     });
   }
 
-  /** GET /ads/next?slot=... with gravity context. 204/!ok => null. */
-  async fetchAdNext(jwt: string, slot: string, sessionId: string, gravityContext?: string): Promise<any | null> {
+  /** GET /ads/next?slot=... — 0.6.19 CLI headers incl. turn id. 204/!ok => null. */
+  async fetchAdNext(jwt: string, slot: string, sessionId: string, opts?: { turnId?: string; trigger?: string; gravityContext?: string }): Promise<any | null> {
     try {
-      const extra: Record<string, string> = { "x-session-id": sessionId };
-      if (gravityContext) extra["x-gravity-context"] = gravityContext;
+      const extra: Record<string, string> = {
+        "x-session-id": sessionId,
+        ...this.clientEnvHeaders(),
+      };
+      if (opts?.turnId) extra["x-turn-id"] = opts.turnId;
+      if (opts?.trigger) extra["x-ad-trigger"] = opts.trigger;
+      if (opts?.gravityContext) extra["x-gravity-context"] = opts.gravityContext;
       const res = await fetch(new URL(`/ads/next?slot=${encodeURIComponent(slot)}`, BASE_URL), {
         headers: { ...this.authHeaders(jwt), ...extra },
         signal: AbortSignal.timeout(5_000),
@@ -175,14 +195,36 @@ export class Upstream {
   }
 
   /** POST /ads/impression (best-effort). */
-  async postImpression(jwt: string, adId: string, clickToken: string, sessionId: string, impFired = false): Promise<void> {
+  async postImpression(jwt: string, adId: string, clickToken: string, sessionId: string, impFired = false, turnId?: string): Promise<void> {
     try {
+      const extra: Record<string, string> = { "x-session-id": sessionId };
+      if (turnId) extra["x-turn-id"] = turnId;
       await fetch(new URL("/ads/impression", BASE_URL), {
         method: "POST",
-        headers: { ...this.authHeaders(jwt), "content-type": "application/json", "x-session-id": sessionId },
+        headers: { ...this.authHeaders(jwt), "content-type": "application/json", ...extra },
         body: JSON.stringify({ ad_id: adId, click_token: clickToken, ...(impFired ? { imp_fired: true } : {}) }),
         signal: AbortSignal.timeout(3_000),
       });
     } catch { /* best-effort */ }
+  }
+
+  /**
+   * CLI-shaped ad cycle for one turn: fetch the banner slot ad, fire the
+   * Gravity impression pixel from this machine (the CLI fires it where the ad
+   * is shown; the dashboard fires it browser-side when visible), and report
+   * the impression with imp_fired. Fire-and-forget — must never delay or
+   * break the completion.
+   */
+  runAdCycle(jwt: string, sessionId: string, turnId: string, gravityContext?: string): void {
+    void (async () => {
+      try {
+        const ad = await this.fetchAdNext(jwt, "banner", sessionId, { turnId, trigger: "user_message", gravityContext });
+        if (!ad || !ad.ad_id || !ad.click_token) return;
+        const isGravityImp = ad.source === "gravity" && typeof ad.imp_url === "string"
+          && /^https:\/\/[^/]*trygravity\.(ai|com)\//.test(ad.imp_url);
+        if (isGravityImp) await fetch(ad.imp_url, { signal: AbortSignal.timeout(3_000) }).catch(() => {});
+        await this.postImpression(jwt, ad.ad_id, ad.click_token, sessionId, isGravityImp, turnId);
+      } catch { /* best-effort */ }
+    })();
   }
 }
