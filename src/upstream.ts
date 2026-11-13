@@ -5,6 +5,12 @@ import { BASE_URL, FALLBACK_CLIENT_VERSION, UA } from "./config.ts";
 export interface CatalogModel {
   id: string;
   name: string;
+  display_name?: string;
+  /** catalog flag: free-unlimited models (limited-time promotions included) */
+  free?: boolean;
+  /** raw catalog usage multiplier ("0.6", "20", …); null for free models */
+  usage_x?: string | null;
+  note?: string | null;
   unavailable?: boolean;
   section?: string;
   /** parsed "~Nx usage" multiplier, default 1 */
@@ -54,7 +60,11 @@ export class Upstream {
       if (!res.ok) return this.catalog;
       const d = (await res.json()) as {
         min: string; latest: string; model: string;
-        models: Array<{ id: string; name: string; unavailable?: boolean; section?: string }>;
+        models: Array<{
+          id: string; name: string; display_name?: string; free?: boolean;
+          usage_x?: string | null; note?: string | null;
+          unavailable?: boolean; section?: string;
+        }>;
       };
       this.clientVersion = d.latest || this.clientVersion;
       this.catalog = {
@@ -64,7 +74,7 @@ export class Upstream {
         fetchedAt: Date.now(),
         models: (d.models || []).map((m) => ({
           ...m,
-          multiplier: Number(/~([\d.]+)x/.exec(m.name)?.[1] ?? 1),
+          multiplier: Number(m.usage_x ?? /~([\d.]+)x/.exec(m.name)?.[1] ?? 1),
         })),
       };
       return this.catalog;

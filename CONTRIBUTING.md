@@ -25,6 +25,9 @@ The codebase is plain TypeScript/ESM, split by responsibility:
 | `src/main.ts` | HTTP server, routing, wiring |
 | `src/config.ts` | Constants, paths, env vars |
 | `src/proxy.ts` | `/v1/chat/completions` + `/v1/models` (OpenAI-compatible) |
+| `src/anthropic.ts` | `/v1/messages` + `/v1/messages/count_tokens` (Anthropic-compatible), Claude config |
+| `src/models.ts` | Free-model detection + Claude Code slot mapping |
+| `src/claude.ts` | Generates Claude Code settings for `freepi-proxy claude` |
 | `src/upstream.ts` | free-pi API client (catalog, stats, tools, ads) |
 | `src/mcp.ts` | Streamable-HTTP MCP server (`/mcp`) |
 | `src/token.ts` | JWT storage + GitHub device-flow login |
@@ -32,14 +35,16 @@ The codebase is plain TypeScript/ESM, split by responsibility:
 | `src/track.ts` | Append-only request log (`~/.freepi-proxy/requests.jsonl`) |
 | `src/gravity.ts` | Optional Gravity pixel/context for ad attribution |
 | `src/ui.html` | Self-contained dashboard (no external assets) |
-| `freepi-proxy` | CLI launcher (start/stop/status/logs/open/models) |
+| `test/` | `node:test` unit tests + opt-in live e2e tests |
+| `freepi-proxy` | CLI launcher (start/stop/status/logs/open/models/claude) |
 
 ## Making changes
 
 1. Keep changes small and focused.
 2. The dashboard is a **single self-contained HTML file** with inline CSS/JS and zero external requests. Please keep it that way.
-3. Test the affected path end-to-end (a completion through `/v1`, an MCP tool call, the dashboard) before opening a PR.
-4. If you touch auth, ads, or credit metering, describe how you verified the behavior.
+3. Run `npm test` for the unit suite. Live tests are opt-in: start the proxy, then run `npm run test:e2e`.
+4. Test the affected path end-to-end (a completion through `/v1` or `/v1/messages`, an MCP tool call, the dashboard, `freepi-proxy claude`) before opening a PR.
+5. If you touch auth, ads, or credit metering, describe how you verified the behavior.
 
 ## Reporting issues
 

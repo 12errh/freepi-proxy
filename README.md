@@ -4,6 +4,7 @@ A **zero-dependency** local proxy, dashboard, chat UI, and MCP server for
 [free-pi](https://freepi.ai) (ad-supported, community-funded inference).
 
 - **OpenAI-compatible** completions at `/v1` — point any agent that speaks the OpenAI API at it
+- **Anthropic-compatible** Messages API at `/v1/messages` — Claude Code works through `freepi-proxy claude`
 - **MCP server** at `/mcp` — `generate_image`, `web_search`, `docs_lookup`, `check_usage`
 - **Dashboard** at `/` — credits/allowance, burn & request log, model catalog, and a built-in **Chat** page
 - **Auth handled for you** — GitHub device-flow login in the UI; reuses the same credential file as `free-pi-cli`
@@ -47,6 +48,7 @@ The `freepi-proxy` launcher (symlink it somewhere on your `PATH`, e.g. `~/.local
 | `freepi-proxy logs [-f] [n]` | Show/follow the log (`~/.freepi-proxy/proxy.log`) |
 | `freepi-proxy open` | Open the dashboard in your browser |
 | `freepi-proxy models` | List models from the live catalog |
+| `freepi-proxy claude` | Launch Claude Code in the current project using free-pi models |
 
 ## Connect an agent (OpenAI-compatible)
 
@@ -90,7 +92,37 @@ Example global config (`~/.config/opencode/opencode.json`) using the proxy as an
 
 ### Claude Code
 
-Not supported (OpenAI format only). Claude Code speaks the **Anthropic Messages API**; using it here would require an Anthropic↔OpenAI translation layer.
+Claude Code speaks the **Anthropic Messages API**, and the proxy now translates it to the same
+OpenAI-compatible backend. Launch Claude Code from your project:
+
+```sh
+freepi-proxy claude
+```
+
+The command starts the proxy if needed, builds a temporary Claude Code settings profile, and runs
+`claude` in the current directory. Your `~/.claude/settings.json` is left untouched.
+
+The latest free models are mapped onto Claude Code's model slots:
+
+| Claude Code slot | free-pi model |
+|---|---|
+| default / Opus | `deepseek-v4.1-flash` |
+| Fable | `particle` |
+| Sonnet | `glm-5.3-flash` |
+| Haiku / small-fast | `deepseek-v4-flash` |
+
+The mapping is chosen from the live catalog, so if the free lineup changes the proxy picks the
+available free models instead.
+
+```sh
+freepi-proxy claude --list                 # free models + current mapping
+freepi-proxy claude --model glm-5.3-flash  # change the default/main model
+freepi-proxy claude --sonnet solar-pro-4   # change one slot
+freepi-proxy claude -- -p "say hi"         # pass flags through to Claude Code
+```
+
+Any Anthropic-format client can also use `http://127.0.0.1:8452` as its base URL; the proxy
+serves `/v1/messages` and `/v1/messages/count_tokens`.
 
 ## MCP tools
 
@@ -154,9 +186,8 @@ Local data lives in `~/.freepi-proxy/` (`requests.jsonl`, `session-id`, `proxy.p
 
 - **Unofficial.** The backend can tighten client/version checks; keep the proxy updated if that happens.
 - **JWT expiry.** Tokens expire (on the order of months) — re-login from the dashboard when needed.
-- **Vision/image input is not supported upstream** (text-only). Image *generation* works via the MCP tool.
+- **Vision/image input depends on the upstream model.** The proxy translates Anthropic image blocks to OpenAI `image_url` data URLs; image *generation* works via the MCP tool.
 - **Consent.** By using free-pi you accept that ads fund inference and sessions may be used to train models — see <https://freepi.ai/privacy>.
-- **Claude Code (Anthropic API) is out of scope** — OpenAI format only.
 
 ## Contributing
 

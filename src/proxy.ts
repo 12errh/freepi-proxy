@@ -41,8 +41,23 @@ function usageFromSse(buf: string): Usage | null {
 export function handleModels(ctx: Ctx): Response {
   const models = (ctx.upstream.catalog?.models ?? [])
     .filter((m) => !m.unavailable)
-    .map((m) => ({ id: m.id, object: "model", owned_by: "free-pi" }));
-  return Response.json({ object: "list", data: models });
+    .map((m) => ({
+      // OpenAI fields
+      id: m.id,
+      object: "model",
+      owned_by: "free-pi",
+      // Anthropic fields (Claude Code and other Anthropic clients read these)
+      type: "model",
+      display_name: m.display_name || m.name.split(" · ")[0] || m.id,
+      created_at: new Date(ctx.upstream.catalog?.fetchedAt ?? Date.now()).toISOString(),
+    }));
+  return Response.json({
+    object: "list",
+    data: models,
+    has_more: false,
+    first_id: models[0]?.id ?? null,
+    last_id: models[models.length - 1]?.id ?? null,
+  });
 }
 
 export async function handleCompletions(req: Request, ctx: Ctx): Promise<Response> {

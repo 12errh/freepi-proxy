@@ -32,10 +32,12 @@ Commands:
   logs [n]        Show last n log lines (default 50); use -f to follow
   open            Open the dashboard in your browser
   models          List available free-pi models from the proxy
+  claude          Launch Claude Code with the latest free-pi models
   help            Show this help
 
 Dashboard: ${BASE}
 Completions: ${BASE}/v1   (OpenAI-compatible)
+Messages: ${BASE}/v1/messages   (Anthropic-compatible)
 MCP tools: ${BASE}/mcp
 Env: FREEPI_PROXY_PORT=${PORT}
 EOF
@@ -151,6 +153,76 @@ cmd_models() {
     });'
 }
 
+claude_usage() {
+  cat <<EOF
+Launch Claude Code through freepi-proxy (Anthropic-compatible)
+
+Usage: freepi-proxy claude [options] [-- <claude args>]
+
+Options:
+  --model ID     default model (also Claude Code's main slot)
+  --fable ID     model for the Fable slot
+  --opus ID      model for the Opus slot
+  --sonnet ID    model for the Sonnet slot
+  --haiku ID     model for the Haiku / small-fast slot
+  --list         list free models and the current mapping
+  -h, --help     show this help
+
+Examples:
+  freepi-proxy claude
+  freepi-proxy claude --model glm-5.3-flash
+  freepi-proxy claude --list
+  freepi-proxy claude -- -p "Reply with exactly: OK"
+EOF
+}
+
+cmd_claude() {
+  local -a pass=() gen=()
+  local list=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --list) list=1; shift;;
+      --help|-h) claude_usage; return 0;;
+      --model|--fable|--opus|--sonnet|--haiku)
+        if [[ $# -lt 2 ]]; then
+          echo "missing value for $1" >&2
+          return 1
+        fi
+        gen+=("$1" "$2"); shift 2;;
+      --model=*|--fable=*|--opus=*|--sonnet=*|--haiku=*)
+        gen+=("${1%%=*}" "${1#*=}"); shift;;
+      --) shift; pass+=("$@"); break;;
+      *) pass+=("$1"); shift;;
+    esac
+  done
+
+  if ! is_up; then
+    if ! cmd_start -d >/dev/null; then
+      echo "could not start freepi-proxy on port ${PORT}" >&2
+      return 1
+    fi
+  fi
+
+  if [[ $list -eq 1 ]]; then
+    node "$DIR/src/claude.ts" --list
+    return 0
+  fi
+
+  if ! command -v claude >/dev/null 2>&1; then
+    echo "claude not found on PATH — install Claude Code first" >&2
+    echo "see: https://docs.anthropic.com/en/docs/claude-code" >&2
+    return 1
+  fi
+
+  local settings
+  if ! settings="$(node "$DIR/src/claude.ts" ${gen[@]+"${gen[@]}"})"; then
+    echo "could not build Claude Code settings" >&2
+    return 1
+  fi
+
+  exec claude ${pass[@]+"${pass[@]}"} --settings "$settings"
+}
+
 cmd="${1:-help}"; shift || true
 case "$cmd" in
   start)    cmd_start "${1:-}";;
@@ -160,6 +232,7 @@ case "$cmd" in
   logs)     cmd_logs "${1:-}";;
   open)     cmd_open;;
   models)   cmd_models;;
+  claude)   cmd_claude "$@";;
   help|-h|--help) usage;;
   *) echo "unknown command: $cmd"; echo; usage; exit 1;;
 esac

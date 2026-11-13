@@ -7,6 +7,12 @@ import { newTracker } from "./track.ts";
 import { bootState, onLoginToken, pollStats, startBackgroundLoops } from "./state.ts";
 import type { Ctx } from "./state.ts";
 import { handleCompletions, handleModels } from "./proxy.ts";
+import {
+  handleAnthropicCountTokens,
+  handleAnthropicMessages,
+  handleApiHello,
+  handleClaudeConfig,
+} from "./anthropic.ts";
 import { handleMcp } from "./mcp.ts";
 import { LoginManager } from "./token.ts";
 import { startGravityPixel } from "./gravity.ts";
@@ -82,8 +88,14 @@ async function route(req: Request): Promise<Response> {
   const p = url.pathname;
 
   if (p === "/v1/chat/completions" && req.method === "POST") return handleCompletions(req, ctx);
+  if (p === "/v1/messages" && req.method === "POST") return handleAnthropicMessages(req, ctx);
+  if (p === "/v1/messages/count_tokens" && req.method === "POST") return handleAnthropicCountTokens(req);
   if (p === "/v1/models" && req.method === "GET") return handleModels(ctx);
   if (p === "/mcp" && (req.method === "POST" || req.method === "GET" || req.method === "DELETE")) return handleMcp(req, ctx);
+
+  // Claude Code probes this before opening the Messages stream.
+  if (p === "/api/hello" && (req.method === "GET" || req.method === "HEAD")) return handleApiHello(req);
+  if (p === "/api/claude/config" && req.method === "GET") return handleClaudeConfig(ctx);
 
   if (p === "/" || p === "/index.html") {
     return new Response(UI_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
@@ -211,6 +223,8 @@ startBackgroundLoops(ctx, () => {});
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`freepi-proxy  →  http://127.0.0.1:${PORT}`);
   console.log(`  completions : http://127.0.0.1:${PORT}/v1  (OpenAI-compatible)`);
+  console.log(`  messages    : http://127.0.0.1:${PORT}/v1/messages  (Anthropic-compatible)`);
+  console.log(`  claude      : freepi-proxy claude`);
   console.log(`  MCP         : http://127.0.0.1:${PORT}/mcp`);
   console.log(`  dashboard   : http://127.0.0.1:${PORT}`);
   console.log(`  upstream    : ${BASE_URL}`);

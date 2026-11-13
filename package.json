@@ -9,7 +9,9 @@
   },
   "scripts": {
     "start": "node src/main.ts",
-    "start:bun": "bun src/main.ts"
+    "start:bun": "bun src/main.ts",
+    "test": "node --test test/*.test.ts",
+    "test:e2e": "FREEPI_E2E=1 node --test test/e2e.test.ts"
   },
   "engines": {
     "node": ">=22.19.0"
