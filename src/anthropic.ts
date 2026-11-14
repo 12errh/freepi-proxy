@@ -7,7 +7,7 @@
 
 import { CREDIT_DIFF_MIN_MS, DASHBOARD_URL } from "./config.ts";
 import type { Ctx } from "./state.ts";
-import { settleSpend } from "./state.ts";
+import { completeWithSessionRetry, settleSpend } from "./state.ts";
 import { estimateCredits } from "./proxy.ts";
 import type { Catalog } from "./upstream.ts";
 import {
@@ -631,17 +631,11 @@ export async function handleAnthropicMessages(req: Request, ctx: Ctx): Promise<R
 
   const source = new URL(req.url).searchParams.get("source") || "claude";
 
-  // Same per-request turn + ad cycle as the OpenAI endpoint.
-  const turnId = crypto.randomUUID();
-  ctx.upstream.runAdCycle(jwt, ctx.state.sessionId, turnId, ctx.getGravityContext?.());
-
+  // Same per-request turn + ad cycle as the OpenAI endpoint; the session is
+  // retired and the request replayed once if upstream says it is spent.
   let upstream: Response;
   try {
-    upstream = await ctx.upstream.completions(jwt, JSON.stringify(translated.body), req.signal, {
-      sessionId: ctx.state.sessionId,
-      turnId,
-      gravityContext: ctx.getGravityContext?.(),
-    });
+    upstream = (await completeWithSessionRetry(ctx, jwt, JSON.stringify(translated.body), req.signal)).upstream;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     await record(ctx, started, translated.model, source, 0, null, message);

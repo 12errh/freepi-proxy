@@ -169,6 +169,8 @@ Ad attribution is best-effort and must never break startup; if the Gravity SDK i
 
 The proxy reuses a **single, stable session id** across restarts (`~/.freepi-proxy/session-id`) so it occupies only one of the account's concurrent session slots (accounts are limited). If you ever hit `concurrent_session` errors from stale leases, the proxy can't clear them itself — running `npx free-pi-cli@latest` and using `/close-other-session` (or waiting for the lease to expire) will free a slot.
 
+That session id is **not** immortal. free-pi meters a *session* (one `free-pi-cli` run), not just a single request: once a session has spent its context/token budget, every later completion is rejected with `session is too long`, even a compacted prompt of 40k tokens. The CLI never notices because each launch starts a new session; a long-lived proxy would otherwise wedge itself. So when the backend reports a spent session, the proxy retires it, mints a fresh one, and replays the request once — compaction then works and the next turn goes through. The retired lease expires on its own.
+
 ## Configuration (env vars)
 
 | Variable | Default | Purpose |

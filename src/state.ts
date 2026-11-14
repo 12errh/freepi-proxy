@@ -48,6 +48,98 @@ async function loadSessionId(): Promise<string> {
   return id;
 }
 
+// ---------- upstream sessions ----------
+//
+// free-pi meters a *session* (one `free-pi-cli` run, identified by
+// x-session-id), not only a single request. A fresh session accepts a large
+// prompt, but once a session has spent its context/token budget the backend
+// answers every later completion with "session is too long" — a smaller
+// prompt (a freshly compacted conversation) does not help, because the session
+// itself is spent, not the request.
+//
+// The CLI never notices: it starts a new session on every launch. This proxy
+// persists one session id forever to hold a single concurrent-session slot, so
+// a long agent run used to wedge itself at ~130k context and then keep failing
+// at 40k/80k even after compaction. We retire a spent session and replay the
+// request on a fresh one instead, which is what makes compaction work again.
+
+/** Session-level rejections. Deliberately excludes `concurrent_session`, which
+ * is about the account's slot count — rotating more sessions would only make
+ * that worse. */
+const SESSION_EXHAUSTED =
+  /session[\s_-]*(?:is[\s_-]*)?too[\s_-]*long|session_too_long|session[\s_-]*(?:token[\s_-]*)?(?:limit|budget|quota|cap)\b|session[\s_-]*(?:exhausted|spent)/i;
+
+export function isSessionTooLong(status: number, body: string): boolean {
+  if (status < 400) return false;
+  if (/concurrent[\s_-]*session/i.test(body)) return false;
+  return SESSION_EXHAUSTED.test(body);
+}
+
+/** Retire the current upstream session and persist a fresh one. The old
+ * session's lease is left to expire; it is already unusable. */
+export async function rotateSession(state: AppState, reason: string): Promise<string> {
+  const previous = state.sessionId;
+  const id = crypto.randomUUID();
+  state.sessionId = id;
+  try {
+    await mkdir(dirname(SESSION_ID_PATH), { recursive: true });
+    await writeFile(SESSION_ID_PATH, id);
+  } catch { /* the in-memory rotation is enough for this run */ }
+  console.warn(`[freepi-proxy] upstream session rotated (${reason}); retired ${previous}`);
+  return id;
+}
+
+export interface SessionCompletion {
+  /** upstream response for the attempt that was returned to the client */
+  upstream: Response;
+  /** session id that response came from */
+  sessionId: string;
+  /** true when the first attempt was rejected and the request was replayed */
+  retried: boolean;
+}
+
+/** Rebuild a failed response whose body we had to consume to classify it. */
+function replayed(res: Response, body: string): Response {
+  const headers = new Headers();
+  const ctype = res.headers.get("content-type");
+  if (ctype) headers.set("content-type", ctype);
+  return new Response(body, { status: res.status, statusText: res.statusText, headers });
+}
+
+/** Send one completion as a CLI-style turn (ad cycle + turn id on the current
+ * session). If upstream reports the session itself is spent, retire it and
+ * replay the same body once on a fresh session. */
+export async function completeWithSessionRetry(
+  ctx: Ctx,
+  jwt: string,
+  body: string,
+  signal: AbortSignal,
+): Promise<SessionCompletion> {
+  const send = async (sessionId: string): Promise<Response> => {
+    const turnId = crypto.randomUUID();
+    // The ad cycle must run for this turn id on this session, or upstream
+    // pauses the completion with ads_required.
+    ctx.upstream.runAdCycle(jwt, sessionId, turnId, ctx.getGravityContext?.());
+    return ctx.upstream.completions(jwt, body, signal, {
+      sessionId,
+      turnId,
+      gravityContext: ctx.getGravityContext?.(),
+    });
+  };
+
+  const first = await send(ctx.state.sessionId);
+  if (first.ok) return { upstream: first, sessionId: ctx.state.sessionId, retried: false };
+
+  const text = await first.text().catch(() => "");
+  if (!isSessionTooLong(first.status, text)) {
+    return { upstream: replayed(first, text), sessionId: ctx.state.sessionId, retried: false };
+  }
+
+  const sessionId = await rotateSession(ctx.state, `upstream ${first.status}: ${text.slice(0, 120)}`);
+  const second = await send(sessionId);
+  return { upstream: second, sessionId, retried: true };
+}
+
 export async function bootState(): Promise<AppState> {
   const token = await loadJwt();
   const st: TokenState = { token, status: token ? "unknown" : "missing", checkedAt: 0 };

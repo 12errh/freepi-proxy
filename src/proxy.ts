@@ -4,7 +4,7 @@
 
 import { CREDIT_DIFF_MIN_MS, DASHBOARD_URL, EST_CREDITS_PER_TOKEN } from "./config.ts";
 import type { Ctx } from "./state.ts";
-import { settleSpend } from "./state.ts";
+import { completeWithSessionRetry, settleSpend } from "./state.ts";
 
 /** Instant local estimate: tokens × model multiplier × calibrated base rate. */
 export function estimateCredits(ctx: Ctx, model: string, pt: number, ct: number): number {
@@ -84,19 +84,12 @@ export async function handleCompletions(req: Request, ctx: Ctx): Promise<Respons
   // Every proxied request is a new CLI-style "turn": the free-pi server links
   // completions to the turn id whose ad cycle ran (measured: a fresh turn id
   // without an ad cycle is paused with ads_required; the turn id that had one
-  // completes freely). So mint a turn id per request, run the ad cycle on it
-  // (fetch ad → fire impression pixel → report impression), and send the same
-  // turn id on the completion — exactly the sequence free-pi-cli produces.
-  const turnId = crypto.randomUUID();
-  ctx.upstream.runAdCycle(jwt, ctx.state.sessionId, turnId, ctx.getGravityContext?.());
-
+  // completes freely). completeWithSessionRetry mints that turn id, runs the ad
+  // cycle, and replays the request on a fresh session if upstream reports that
+  // the current session (not this request) is spent.
   let upstream: Response;
   try {
-    upstream = await ctx.upstream.completions(jwt, raw, req.signal, {
-      sessionId: ctx.state.sessionId,
-      turnId,
-      gravityContext: ctx.getGravityContext?.(),
-    });
+    upstream = (await completeWithSessionRetry(ctx, jwt, raw, req.signal)).upstream;
   } catch (e) {
     await ctx.tracker.add({
       ts: started, kind: "chat", model, pt: 0, ct: 0, credits: null, ms: Date.now() - started,
