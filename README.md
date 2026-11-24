@@ -62,6 +62,38 @@ OPENAI_API_KEY=local
 Model IDs come from the live catalog (e.g. `glm-5.3-flash`, `deepseek-v4-flash`, `gpt-6-luna`,
 `solar-pro-4`, `gemma-4-uncensored`). The dashboard **Models** tab and `freepi-proxy models` show the current list, multipliers, and availability.
 
+### omp
+
+The proxy can be used as an omp custom provider. Its `/v1/models` endpoint exposes only
+currently available **Free Unlimited** models, so omp discovery cannot select paid models.
+Start the proxy, then create `~/.omp/agent/models.yml`:
+
+```yaml
+providers:
+  freepi:
+    baseUrl: http://127.0.0.1:8452/v1
+    api: openai-completions
+    apiKey: local
+    discovery:
+      type: openai-models-list
+    modelOverrides:
+      deepseek-v4.1-flash: { contextWindow: 100000, maxTokens: 8192 }
+      deepseek-v4-flash: { contextWindow: 100000, maxTokens: 8192 }
+      glm-5.3-flash: { contextWindow: 100000, maxTokens: 8192 }
+      particle: { contextWindow: 100000, maxTokens: 8192 }
+```
+
+Refresh and select an unlimited model:
+
+```sh
+omp models refresh freepi
+omp models freepi
+omp --model freepi/<model-id>
+```
+
+The provider catalog follows the live free-pi catalog. If a promotion changes, refresh discovery
+before selecting a model.
+
 ### OpenCode
 
 Example global config (`~/.config/opencode/opencode.json`) using the proxy as an OpenAI-compatible provider plus the MCP tools:

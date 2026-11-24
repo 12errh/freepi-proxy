@@ -3,6 +3,7 @@
 // body for the dashboard. Also serves /v1/models from the live catalog.
 
 import { CREDIT_DIFF_MIN_MS, DASHBOARD_URL, EST_CREDITS_PER_TOKEN } from "./config.ts";
+import { freeModels } from "./models.ts";
 import type { Ctx } from "./state.ts";
 import { completeWithSessionRetry, settleSpend } from "./state.ts";
 
@@ -39,8 +40,10 @@ function usageFromSse(buf: string): Usage | null {
 }
 
 export function handleModels(ctx: Ctx): Response {
-  const models = (ctx.upstream.catalog?.models ?? [])
-    .filter((m) => !m.unavailable)
+  // The omp custom provider discovers exactly this list. Keep paid and
+  // unavailable catalog entries out so provider selection cannot spend
+  // allowance unexpectedly.
+  const models = freeModels(ctx.upstream.catalog)
     .map((m) => ({
       // OpenAI fields
       id: m.id,
