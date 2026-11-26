@@ -51,23 +51,28 @@ async function loadSessionId(): Promise<string> {
 // ---------- upstream sessions ----------
 //
 // free-pi meters a *session* (one `free-pi-cli` run, identified by
-// x-session-id), not only a single request. A fresh session accepts a large
-// prompt, but once a session has spent its context/token budget the backend
-// answers every later completion with "session is too long" — a smaller
-// prompt (a freshly compacted conversation) does not help, because the session
-// itself is spent, not the request.
+// x-session-id), not only a single request. If a session exhausts its
+// context/token budget the backend may answer later completions with
+// `context_too_long` ("This conversation is too long. Run /compact or start a
+// new session with /new.") — a smaller prompt (a freshly compacted
+// conversation) does not help, because the session itself is spent, not the
+// request. The upstream bug that triggered this well below the 200k window is
+// fixed; the rotation below stays as a defensive fallback.
 //
 // The CLI never notices: it starts a new session on every launch. This proxy
 // persists one session id forever to hold a single concurrent-session slot, so
-// a long agent run used to wedge itself at ~130k context and then keep failing
-// at 40k/80k even after compaction. We retire a spent session and replay the
-// request on a fresh one instead, which is what makes compaction work again.
+// a long agent run could otherwise wedge itself. We retire a spent session and
+// replay the request on a fresh one instead, which is what makes compaction
+// work again.
 
 /** Session-level rejections. Deliberately excludes `concurrent_session`, which
  * is about the account's slot count — rotating more sessions would only make
- * that worse. */
+ * that worse. The last branch is free-pi's real spent-context rejection:
+ * `{"code":"context_too_long","message":"This conversation is too long…"}`.
+ * A provider's per-request "maximum context length is N tokens" is not matched
+ * on purpose: a fresh session would not make an oversized request fit. */
 const SESSION_EXHAUSTED =
-  /session[\s_-]*(?:is[\s_-]*)?too[\s_-]*long|session_too_long|session[\s_-]*(?:token[\s_-]*)?(?:limit|budget|quota|cap)\b|session[\s_-]*(?:exhausted|spent)/i;
+  /session[\s_-]*(?:is[\s_-]*)?too[\s_-]*long|session_too_long|session[\s_-]*(?:token[\s_-]*)?(?:limit|budget|quota|cap)\b|session[\s_-]*(?:exhausted|spent)|(?:context|conversation)[\s_-]*(?:is[\s_-]*)?too[\s_-]*long/i;
 
 export function isSessionTooLong(status: number, body: string): boolean {
   if (status < 400) return false;

@@ -43,12 +43,28 @@ const ok = () => new Response('data: {"choices":[{"delta":{"content":"hi"}}]}\n\
 const rejected = (status: number, body: string) => () =>
   new Response(body, { status, headers: { "content-type": "application/json" } });
 
+// Verbatim from ~/.freepi-proxy/requests.jsonl: the rejection free-pi actually
+// returns once a session's context budget is spent.
+const CONTEXT_TOO_LONG = JSON.stringify({
+  code: "context_too_long",
+  message: "This conversation is too long. Run /compact or start a new session with /new.",
+  error: {
+    message: "This conversation is too long. Run /compact or start a new session with /new.",
+    code: "context_too_long",
+    type: "free_pi_error",
+  },
+  limit: "context_too_long",
+  remaining_credits_today: 15000,
+  allowance_credits: 15000,
+});
+
 test("recognizes an upstream spent-session rejection", () => {
   assert.equal(isSessionTooLong(400, JSON.stringify({ error: { message: "session is too long" } })), true);
   assert.equal(isSessionTooLong(429, JSON.stringify({ code: "session_too_long" })), true);
   assert.equal(isSessionTooLong(400, '{"error":{"message":"Session is too long: compact and retry."}}'), true);
   assert.equal(isSessionTooLong(413, '{"error":{"message":"Session limit reached"}}'), true);
   assert.equal(isSessionTooLong(400, '{"message":"session token budget exhausted"}'), true);
+  assert.equal(isSessionTooLong(413, CONTEXT_TOO_LONG), true, "free-pi's real context_too_long body");
 });
 
 test("ignores errors that a fresh session would not fix", () => {
@@ -62,8 +78,8 @@ test("ignores errors that a fresh session would not fix", () => {
   assert.equal(isSessionTooLong(200, "session is too long"), false);
 });
 
-test("replays the request once on a fresh session when the session is spent", async () => {
-  const { ctx, calls } = fakeCtx([rejected(400, '{"error":{"message":"session is too long"}}'), ok]);
+test("replays the request once on a fresh session after context_too_long", async () => {
+  const { ctx, calls } = fakeCtx([rejected(413, CONTEXT_TOO_LONG), ok]);
   const result = await completeWithSessionRetry(ctx, "jwt", '{"messages":[]}', new AbortController().signal);
 
   assert.equal(result.retried, true);

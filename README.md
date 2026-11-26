@@ -77,10 +77,10 @@ providers:
     discovery:
       type: openai-models-list
     modelOverrides:
-      deepseek-v4.1-flash: { contextWindow: 100000, maxTokens: 8192 }
-      deepseek-v4-flash: { contextWindow: 100000, maxTokens: 8192 }
-      glm-5.3-flash: { contextWindow: 100000, maxTokens: 8192 }
-      particle: { contextWindow: 100000, maxTokens: 8192 }
+      deepseek-v4.1-flash: { contextWindow: 200000, maxTokens: 8192 }
+      deepseek-v4-flash: { contextWindow: 200000, maxTokens: 8192 }
+      glm-5.3-flash: { contextWindow: 200000, maxTokens: 8192 }
+      particle: { contextWindow: 200000, maxTokens: 8192 }
 ```
 
 Refresh and select an unlimited model:
@@ -108,9 +108,9 @@ Example global config (`~/.config/opencode/opencode.json`) using the proxy as an
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": { "baseURL": "http://127.0.0.1:8452/v1", "apiKey": "local" },
       "models": {
-        "glm-5.3-flash": { "name": "GLM 5.3 Flash · 1.5x", "limit": { "context": 1048576, "output": 8192 } },
-        "deepseek-v4-flash": { "name": "DeepSeek V4 Flash · 1x", "limit": { "context": 1048576, "output": 8192 } },
-        "gpt-6-luna": { "name": "GPT-6 Luna · 2x", "limit": { "context": 1048576, "output": 8192 } }
+        "glm-5.3-flash": { "name": "GLM 5.3 Flash · 1.5x", "limit": { "context": 200000, "output": 8192 } },
+        "deepseek-v4-flash": { "name": "DeepSeek V4 Flash · 1x", "limit": { "context": 200000, "output": 8192 } },
+        "gpt-6-luna": { "name": "GPT-6 Luna · 2x", "limit": { "context": 200000, "output": 8192 } }
       }
     }
   },
@@ -119,6 +119,8 @@ Example global config (`~/.config/opencode/opencode.json`) using the proxy as an
   }
 }
 ```
+
+> Set `limit.context` to `200000` for every free-pi model, matching the CLI's `CONTEXT_WINDOW`. An earlier upstream bug rejected long sessions with `context_too_long` well before that limit; it is fixed, so no reduced cap is needed. The proxy still rotates a spent session if the backend reports one.
 
 > OpenCode v2 may report "missing bearer token" if no credential is present — the `apiKey: "local"` setting above satisfies it. You can generate a fuller model list (all non-premium/available models) from the live catalog; the dashboard shows the current catalog.
 
@@ -201,7 +203,7 @@ Ad attribution is best-effort and must never break startup; if the Gravity SDK i
 
 The proxy reuses a **single, stable session id** across restarts (`~/.freepi-proxy/session-id`) so it occupies only one of the account's concurrent session slots (accounts are limited). If you ever hit `concurrent_session` errors from stale leases, the proxy can't clear them itself — running `npx free-pi-cli@latest` and using `/close-other-session` (or waiting for the lease to expire) will free a slot.
 
-That session id is **not** immortal. free-pi meters a *session* (one `free-pi-cli` run), not just a single request: once a session has spent its context/token budget, every later completion is rejected with `session is too long`, even a compacted prompt of 40k tokens. The CLI never notices because each launch starts a new session; a long-lived proxy would otherwise wedge itself. So when the backend reports a spent session, the proxy retires it, mints a fresh one, and replays the request once — compaction then works and the next turn goes through. The retired lease expires on its own.
+That session id is **not** immortal. free-pi meters a *session* (one `free-pi-cli` run), not just a single request: if a session exhausts its context/token budget, later completions can be rejected with `context_too_long` ("This conversation is too long. Run /compact or start a new session with /new."). The upstream bug that made this fire far below the 200k window is fixed, but the proxy still treats it as session-level: it retires the session, mints a fresh one, and replays the request once, so a stale lease can never wedge a long run. The retired lease expires on its own.
 
 ## Configuration (env vars)
 

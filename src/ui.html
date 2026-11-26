@@ -1067,7 +1067,7 @@ function updateModelMeta() {
     : c === "premium" ? `<span class="chip hot">premium</span>`
     : c === "unavailable" ? `<span class="chip off">offline</span>`
     : `<span class="chip">${m.multiplier}×</span>`;
-  meta.innerHTML = `<div class="meta-row">${chip}<span class="faint">context 1M · out 8K</span></div>`;
+  meta.innerHTML = `<div class="meta-row">${chip}<span class="faint">context 200K · out 8K</span></div>`;
   cat.innerHTML = c === "uncensored"
     ? `<span class="warn">Uncensored / abliterated model — output is unfiltered.</span>`
     : c === "premium" ? `<span class="warn">Premium model — burns allowance fast.</span>`
